@@ -58,3 +58,7 @@ test-audio/
 # Environment
 .env
 .env.local
+
+# Swift build artifacts
+mac/.build/
+mac/dist/
