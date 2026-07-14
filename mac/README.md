@@ -20,6 +20,14 @@ saved as `.txt` next to each source file and are also viewable/copyable in the a
 
 Requires macOS 14+.
 
+## Record live
+
+Click **Record** in the toolbar to capture from the microphone with a live
+transcript that updates roughly every 15 seconds (using the current language
+and translate settings). Stopping saves the full recording plus its transcript
+to `~/Documents/StenoDrop/` as `Recording <date> at <time>.wav` and `.txt`.
+First use prompts for microphone access — everything stays on your Mac.
+
 ## Prerequisites
 
 ```bash

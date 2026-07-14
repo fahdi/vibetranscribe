@@ -41,6 +41,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <string>14.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>StenoDrop records audio only to transcribe it on your Mac. Nothing is uploaded.</string>
     <key>NSHumanReadableCopyright</key>
     <string>© 2026 Fahd Murtaza</string>
 </dict>

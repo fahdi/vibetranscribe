@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StenoDrop — Free Offline Batch Audio Transcription for Mac</title>
-<meta name="description" content="Drop a folder of audio files on StenoDrop and get a .txt transcript next to every one. Free, offline, private — whisper.cpp on your Mac. 100 languages, Urdu → English translation built in.">
+<title>StenoDrop — Free Offline Batch Audio Transcription for Mac, Windows & Linux</title>
+<meta name="description" content="Drop a folder of audio files on StenoDrop and get a .txt transcript next to every one. Free, offline, private — Whisper on your own machine. 100 languages, Urdu → English translation built in. Mac today, Windows & Linux in beta.">
 <meta property="og:title" content="StenoDrop — drop a folder, read everything">
-<meta property="og:description" content="Free offline batch audio transcription for macOS. Whisper-powered, 100 languages, nothing leaves your Mac.">
+<meta property="og:description" content="Free offline batch audio transcription. 100 languages, nothing leaves your machine. Mac, Windows & Linux.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fahdi.github.io/stenodrop/">
 <meta property="og:image" content="https://fahdi.github.io/stenodrop/og.png">
@@ -14,396 +14,454 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="StenoDrop — drop a folder, read everything">
-<meta name="twitter:description" content="Free offline batch audio transcription for macOS. 100 languages, Urdu → English built in.">
+<meta name="twitter:description" content="Free offline batch audio transcription. 100 languages, Urdu → English built in. Mac, Windows & Linux.">
 <meta name="twitter:image" content="https://fahdi.github.io/stenodrop/og.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231C1917'/%3E%3Cpath d='M14 32h4v-8h4v16h4V20h4v24h4V16h4v20h4V24h4v12h4' stroke='%23F6F1E7' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='9' fill='%23C42B1C'/%3E%3Cpath d='M50 45v7m0 0l-3-3m3 3l3-3' stroke='%23F6F1E7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317150F'/%3E%3Cpath d='M14 32h4v-8h4v16h4V20h4v24h4V16h4v20h4V24h4v12h4' stroke='%23FAF7F0' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='9' fill='%23B3261E'/%3E%3Cpath d='M50 45v7m0 0l-3-3m3 3l3-3' stroke='%23FAF7F0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "StenoDrop",
-  "operatingSystem": "macOS 14+",
+  "operatingSystem": "macOS 14+, Windows 10+, Linux",
   "applicationCategory": "UtilitiesApplication",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "description": "Free offline batch audio transcription app for macOS. Drag and drop audio files or folders; transcripts are saved as .txt next to each file. Powered by whisper.cpp, supports 100 languages including Urdu with translation to English.",
+  "description": "Free offline batch audio transcription app. Drag and drop audio files or folders; transcripts are saved as .txt next to each file. Powered by Whisper, supports 100 languages including Urdu with translation to English.",
   "url": "https://fahdi.github.io/stenodrop/",
   "downloadUrl": "https://github.com/fahdi/stenodrop/releases/latest"
 }
 </script>
+<meta name="theme-color" content="#FAF7F0">
+<script>
+// Theme before first paint: manual choice wins, else day/night by local clock.
+(function(){
+  var saved=null;try{saved=localStorage.getItem('sd-theme')}catch(e){}
+  var h=new Date().getHours();
+  var auto=(h>=7&&h<19)?'light':'dark';
+  document.documentElement.dataset.theme=saved||auto;
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,700;9..144,900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Besley:ital,wght@0,400;0,700;0,900;1,400;1,900&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 :root{
-  --paper:#F6F1E7;
-  --paper-deep:#EFE7D6;
-  --tape:#FFFDF7;
-  --ink:#1C1917;
-  --ink-soft:#3D3833;
-  --dim:#6F6A60;
-  --stamp:#C42B1C;
-  --stamp-deep:#9E2114;
-  --rule:#D9D0BC;
-  --mono:'IBM Plex Mono',ui-monospace,monospace;
-  --serif:'Fraunces',Georgia,serif;
+  --paper:#FAF7F0;
+  --paper-2:#F3EEE2;
+  --sheet:#FFFEFA;
+  --ink:#17150F;
+  --ink-2:#3B372E;
+  --dim:#6E675C;
+  --rule:#DCD5C8;
+  --red:#B3261E;
+  --red-2:#8C1B15;
+  --mono:'Courier Prime',ui-monospace,monospace;
+  --slab:'Besley',Georgia,serif;
+}
+/* chambers at night */
+:root[data-theme="dark"]{
+  --paper:#141209;
+  --paper-2:#1D1A10;
+  --sheet:#1B1810;
+  --ink:#EDE6D4;
+  --ink-2:#CDC5B0;
+  --dim:#948C79;
+  --rule:#37321F;
+  --red:#D6564C;
+  --red-2:#E4756C;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{
-  background:var(--paper);
-  color:var(--ink);
-  font-family:var(--serif);
-  font-size:17px;
-  line-height:1.6;
-  overflow-x:hidden;
-}
-/* paper grain */
-body::before{
-  content:"";position:fixed;inset:0;pointer-events:none;z-index:2000;opacity:.5;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+body{background:var(--paper);color:var(--ink);font-family:var(--slab);font-size:17px;line-height:1.65;overflow-x:clip}
 a{color:inherit}
-::selection{background:var(--stamp);color:var(--tape)}
+::selection{background:var(--red);color:var(--sheet)}
+.wrap{max-width:1060px;margin:0 auto;padding:0 28px}
 
-.wrap{max-width:1080px;margin:0 auto;padding:0 28px}
-
-/* ---------- top bar ---------- */
-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:22px 0;border-bottom:2px solid var(--ink);
-}
-.brand{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-weight:600;font-size:18px;letter-spacing:-.02em;text-decoration:none}
+/* ---------- header ---------- */
+header{border-bottom:1px solid var(--ink)}
+.head-in{display:flex;align-items:center;justify-content:space-between;padding-top:20px;padding-bottom:20px}
+.brand{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-weight:700;font-size:19px;text-decoration:none}
 .brand svg{width:34px;height:34px}
-.nav{display:flex;gap:26px;font-family:var(--mono);font-size:13px}
-.nav a{text-decoration:none;color:var(--ink-soft);border-bottom:1px dashed transparent;padding-bottom:2px}
-.nav a:hover{color:var(--stamp);border-bottom-color:var(--stamp)}
-@media(max-width:640px){.nav{display:none}}
+.nav{display:flex;align-items:center;gap:24px;font-family:var(--mono);font-size:13px;flex-wrap:wrap}
+.nav a{text-decoration:none;color:var(--ink-2);padding:6px 0;min-height:32px;display:inline-flex;align-items:center}
+.nav a:hover{color:var(--red);text-decoration:underline;text-underline-offset:4px}
+.theme-btn{
+  cursor:pointer;background:none;border:1px solid var(--ink-2);color:var(--ink-2);
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:7px 12px;display:inline-flex;align-items:center;gap:7px;min-height:32px;
+}
+.theme-btn:hover{border-color:var(--red);color:var(--red)}
+@media(max-width:720px){
+  .head-in{flex-direction:column;align-items:flex-start;gap:12px}
+  .nav{gap:16px;font-size:12.5px}
+  .nav a:not(.nav-key){display:none}
+}
+.case-line{
+  border-top:1px solid var(--rule);font-family:var(--mono);font-size:11.5px;color:var(--dim);
+  letter-spacing:.08em;padding:8px 0 9px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+}
+
+/* ---------- pleading paper base ---------- */
+.pleading{position:relative;background:var(--sheet);border:1px solid var(--ink);}
+.pleading .gutter{
+  position:absolute;top:0;bottom:0;left:0;width:52px;
+  border-right:1px solid var(--red);
+  font-family:var(--mono);font-size:11px;color:var(--dim);
+  display:flex;flex-direction:column;justify-content:space-between;
+  padding:18px 0;text-align:center;user-select:none;
+}
+.pleading .gutter::after{
+  content:"";position:absolute;top:0;bottom:0;right:3px;width:1px;background:var(--red);
+}
+.pleading .sheet{padding:34px 40px 40px 84px}
+@media(max-width:660px){.pleading .gutter{width:34px}.pleading .sheet{padding:26px 22px 30px 56px}}
 
 /* ---------- hero ---------- */
-.hero{position:relative;padding:84px 0 110px}
-.hero-ghost{
-  position:absolute;top:34px;right:-60px;
-  font-family:var(--serif);font-weight:900;font-size:clamp(160px,26vw,320px);
-  line-height:.8;color:transparent;-webkit-text-stroke:1px var(--rule);
-  letter-spacing:-.05em;user-select:none;pointer-events:none;z-index:0;
-}
-.hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center}
-@media(max-width:880px){.hero-grid{grid-template-columns:1fr}.hero-ghost{display:none}}
-.kicker{
-  display:inline-flex;align-items:center;gap:10px;
-  font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--stamp);
-  margin-bottom:26px;font-weight:600;
-}
-.kicker::before{content:"";width:34px;height:2px;background:var(--stamp)}
-h1{
-  font-weight:900;font-size:clamp(46px,7vw,84px);line-height:.98;letter-spacing:-.03em;
-  font-variation-settings:'opsz' 144;
-}
-h1 .drop{color:var(--stamp);font-style:italic}
-.sub{margin:28px 0 8px;font-size:20px;color:var(--ink-soft);max-width:34ch}
-.sub strong{font-weight:700}
-.meta-line{font-family:var(--mono);font-size:13px;color:var(--dim);margin-bottom:36px}
+.hero{padding-top:72px;padding-bottom:84px}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:start}
+@media(max-width:900px){.hero-grid{grid-template-columns:1fr}}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:22px}
+h1{font-weight:900;font-size:clamp(44px,6.4vw,74px);line-height:1.02;letter-spacing:-.015em}
+h1 em{font-style:italic;color:var(--red)}
+.qa{font-family:var(--mono);font-size:15.5px;margin-top:30px;color:var(--ink-2);line-height:1.9}
+.qa b{font-weight:700;color:var(--ink)}
+.meta-line{font-family:var(--mono);font-size:13px;color:var(--dim);margin:26px 0 34px;letter-spacing:.04em}
 .cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
 .btn{
-  font-family:var(--mono);font-weight:600;font-size:15px;text-decoration:none;
-  padding:15px 26px;border:2px solid var(--ink);border-radius:4px;
-  display:inline-flex;align-items:center;gap:10px;
-  transition:transform .15s ease,box-shadow .15s ease,background .15s ease;
+  font-family:var(--mono);font-weight:700;font-size:15px;text-decoration:none;
+  padding:15px 26px;border:1.5px solid var(--ink);display:inline-flex;align-items:center;gap:10px;
+  transition:background .15s ease,color .15s ease;
 }
-.btn-primary{background:var(--ink);color:var(--tape);box-shadow:5px 5px 0 var(--stamp)}
-.btn-primary:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--stamp)}
-.btn-ghost{background:transparent;color:var(--ink)}
-.btn-ghost:hover{background:var(--paper-deep)}
-.free-tag{
-  font-family:var(--mono);font-size:12px;color:var(--stamp);font-weight:600;
-  transform:rotate(-4deg);border:2px solid var(--stamp);border-radius:3px;padding:4px 9px;
-}
+.btn-primary{background:var(--ink);color:var(--sheet)}
+.btn-primary:hover{background:var(--red);border-color:var(--red)}
+.btn-ghost{background:transparent}
+.btn-ghost:hover{background:var(--paper-2)}
 
-/* tape demo card */
-.tape-card{
-  position:relative;background:var(--tape);border:2px solid var(--ink);border-radius:6px;
-  box-shadow:10px 12px 0 rgba(28,25,23,.12);transform:rotate(1.6deg);
-  font-family:var(--mono);
+/* transcript exhibit card */
+.exhibit{position:relative}
+.exhibit-title{
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);
+  border-bottom:1px solid var(--ink);padding:12px 16px;display:flex;justify-content:space-between;gap:10px;
 }
-.tape-card:hover{transform:rotate(.4deg)}
-.tape-card{transition:transform .3s ease}
-.tape-head{
-  display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--ink);
-  padding:12px 16px;font-size:12px;color:var(--dim);
+.exhibit-title b{color:var(--ink)}
+.t-lines{font-family:var(--mono);font-size:14px;line-height:2.05;padding:18px 20px 58px 0;counter-reset:tl}
+.t-line{display:flex;gap:14px}
+.t-line::before{
+  counter-increment:tl;content:counter(tl,decimal-leading-zero);
+  min-width:52px;text-align:center;color:var(--dim);font-size:11.5px;
+  border-right:1px solid var(--rule);align-self:stretch;display:flex;align-items:center;justify-content:center;
 }
-.dot{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--ink)}
-.dot:nth-child(1){background:var(--stamp)}
-.tape-body{padding:20px 22px 26px;font-size:13.5px;line-height:1.9}
-.tb-file{color:var(--ink);font-weight:600}
-.tb-arrow{color:var(--stamp)}
-.tb-line{color:var(--ink-soft);white-space:pre-wrap;word-break:break-word;min-height:1.9em}
-.tb-line .caret{display:inline-block;width:8px;height:1.05em;background:var(--stamp);vertical-align:text-bottom;animation:blink 1s steps(1) infinite}
+.t-body{padding-right:18px;min-height:2.05em;flex:1}
+.t-file b{font-weight:700}
+.t-file .to{color:var(--red)}
+.t-ur{direction:rtl;text-align:right;font-size:16px}
+.t-dim{color:var(--dim)}
+.caret{display:inline-block;width:8px;height:1.05em;background:var(--red);vertical-align:text-bottom;animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
-.tb-dim{color:var(--dim)}
-.tb-urdu{direction:rtl;text-align:right;font-size:15px}
-.tape-stamp{
-  position:absolute;right:-14px;bottom:-18px;transform:rotate(-8deg);
-  border:2.5px solid var(--stamp);color:var(--stamp);border-radius:4px;
-  font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.12em;
-  padding:6px 10px;background:var(--tape);text-transform:uppercase;
-}
+/* certification seal */
+.seal{position:absolute;right:-22px;bottom:-26px;width:104px;height:104px;color:var(--red);opacity:.92}
+.seal svg{width:100%;height:100%}
+@media(max-width:900px){.seal{right:-8px}}
 
-/* ---------- tape ribbon divider ---------- */
-.ribbon{
-  border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);
-  background:var(--tape);overflow:hidden;padding:12px 0;
-}
-.ribbon-track{
-  display:flex;align-items:center;gap:12px;width:max-content;
-  animation:ticker 80s linear infinite;
-}
-.ribbon:hover .ribbon-track{animation-play-state:paused}
-.ribbon-set{display:flex;align-items:center;gap:12px;padding-right:12px}
-.chip{
-  font-family:var(--mono);font-style:normal;font-weight:600;font-size:13px;
-  letter-spacing:.06em;color:var(--ink-soft);
-  border:1.5px solid var(--ink-soft);border-radius:4px;padding:4px 12px;
-  background:var(--paper);white-space:nowrap;
-}
-.chip-note{
-  font-family:var(--mono);font-style:normal;font-size:12px;letter-spacing:.18em;
-  text-transform:uppercase;color:var(--stamp);white-space:nowrap;padding:0 14px;font-weight:600;
-}
-@keyframes ticker{to{transform:translateX(-50%)}}
+/* ---------- format index ribbon ---------- */
+.formats{border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);background:var(--sheet);overflow:hidden;padding:11px 0}
+.f-track{display:flex;align-items:center;width:max-content;animation:crawl 80s linear infinite}
+.formats:hover .f-track{animation-play-state:paused}
+.f-set{display:flex;align-items:center}
+.f-item{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--ink-2);padding:2px 18px;border-right:1px solid var(--rule);white-space:nowrap}
+.f-note{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--red);padding:0 22px;font-weight:700;white-space:nowrap}
+@keyframes crawl{to{transform:translateX(-50%)}}
 
 /* ---------- sections ---------- */
-section{padding:96px 0}
-.sec-label{
-  font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--stamp);font-weight:600;margin-bottom:14px;
-}
-h2{font-weight:900;font-size:clamp(32px,4.6vw,52px);letter-spacing:-.02em;line-height:1.05;margin-bottom:18px}
-.lede{color:var(--ink-soft);max-width:52ch;font-size:19px}
+section{padding:88px 0}
+.sec-label{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:14px}
+h2{font-weight:900;font-size:clamp(30px,4.2vw,46px);letter-spacing:-.01em;line-height:1.08;margin-bottom:16px}
+.lede{color:var(--ink-2);max-width:56ch;font-size:18.5px}
 
-/* steps */
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:56px;border:2px solid var(--ink);border-radius:6px;overflow:hidden;background:var(--tape)}
-@media(max-width:760px){.steps{grid-template-columns:1fr}}
-.step{padding:34px 30px 40px;border-right:2px solid var(--ink)}
-.step:last-child{border-right:none}
-@media(max-width:760px){.step{border-right:none;border-bottom:2px solid var(--ink)}.step:last-child{border-bottom:none}}
-.step-num{
-  font-family:var(--mono);font-weight:600;font-size:13px;color:var(--tape);
-  background:var(--stamp);display:inline-block;padding:3px 10px;border-radius:3px;margin-bottom:18px;
-}
-.step h3{font-size:23px;font-weight:700;margin-bottom:10px;letter-spacing:-.01em}
-.step p{color:var(--ink-soft);font-size:15.5px}
-.step code{font-family:var(--mono);font-size:13px;background:var(--paper-deep);padding:1px 6px;border-radius:3px}
+/* docket steps */
+.docket{margin-top:48px;border:1px solid var(--ink);background:var(--sheet)}
+.d-row{display:grid;grid-template-columns:120px 200px 1fr;border-bottom:1px solid var(--rule)}
+.d-row:last-child{border-bottom:none}
+.d-no{font-family:var(--mono);font-size:13px;color:var(--dim);padding:26px 0;text-align:center;border-right:1px solid var(--rule)}
+.d-act{font-family:var(--slab);font-weight:700;font-size:21px;padding:22px 26px;border-right:1px solid var(--rule)}
+.d-desc{padding:24px 30px;color:var(--ink-2);font-size:15.5px}
+.d-desc code{font-family:var(--mono);font-size:13px;background:var(--paper-2);padding:1px 6px}
+@media(max-width:760px){.d-row{grid-template-columns:64px 1fr}.d-desc{grid-column:1/3;border-top:1px dashed var(--rule)}}
 
-/* features — index cards */
-.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:56px}
-@media(max-width:880px){.cards{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.cards{grid-template-columns:1fr}}
-.card{
-  background:var(--tape);border:2px solid var(--ink);border-radius:6px;padding:26px 24px 30px;
-  position:relative;transition:transform .18s ease,box-shadow .18s ease;
-}
-.card:hover{transform:translateY(-4px) rotate(-.4deg);box-shadow:6px 8px 0 rgba(28,25,23,.14)}
-.card::before{
-  content:attr(data-i);position:absolute;top:-13px;left:18px;background:var(--paper);
-  font-family:var(--mono);font-size:12px;font-weight:600;color:var(--stamp);padding:0 8px;letter-spacing:.1em;
-}
-.card h3{font-size:20px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em}
-.card p{font-size:15px;color:var(--ink-soft)}
-.card .ur{font-size:17px}
+/* exhibits (features) */
+.exhibits{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:48px;border:1px solid var(--ink);background:var(--sheet)}
+@media(max-width:880px){.exhibits{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.exhibits{grid-template-columns:1fr}}
+.ex{padding:28px 26px 32px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.ex-tag{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--red);font-weight:700;margin-bottom:12px;text-transform:uppercase}
+.ex h3{font-size:20px;font-weight:700;margin-bottom:8px}
+.ex p{font-size:15px;color:var(--ink-2)}
+.ex .ur{font-size:17px}
 
-/* languages strip */
-.langs{
-  margin-top:60px;background:var(--ink);color:var(--paper);border-radius:6px;
-  padding:44px 40px;display:grid;grid-template-columns:auto 1fr;gap:40px;align-items:center;
-  position:relative;overflow:hidden;
-}
-@media(max-width:760px){.langs{grid-template-columns:1fr;gap:22px}}
-.langs::after{
-  content:"اردو ▸ EN";position:absolute;right:-10px;bottom:-34px;font-family:var(--mono);
-  font-size:110px;font-weight:600;color:rgba(246,241,231,.06);white-space:nowrap;
-}
-.langs h3{font-size:30px;font-weight:900;letter-spacing:-.02em;line-height:1.1}
-.langs h3 em{color:#E8B34B;font-style:normal}
-.langs p{color:#B9B2A4;font-size:16px;max-width:56ch;position:relative;z-index:1}
-.langs p strong{color:var(--paper)}
+/* languages statement */
+.statement{margin-top:56px;border:1px solid var(--ink);border-left:6px double var(--red);background:var(--sheet);padding:38px 42px}
+.statement h3{font-size:26px;font-weight:900;margin-bottom:10px}
+.statement h3 em{font-style:italic;color:var(--red)}
+.statement p{color:var(--ink-2);max-width:64ch}
 
-/* install */
-.install-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:52px}
+/* ---------- download ---------- */
+.dl-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:48px}
+@media(max-width:820px){.dl-cards{grid-template-columns:1fr}}
+.dl{border:1.5px solid var(--ink);background:var(--sheet);padding:26px 26px 30px;display:flex;flex-direction:column;gap:10px}
+.dl.detected{outline:3px solid var(--red);outline-offset:-1.5px}
+.dl-os{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.dl-os h3{font-size:22px;font-weight:900}
+.dl-badge{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--dim);color:var(--dim);padding:3px 8px;white-space:nowrap}
+.dl-badge.live{border-color:var(--red);color:var(--red);font-weight:700}
+.dl p{font-size:14px;color:var(--ink-2);flex:1}
+.dl .btn{justify-content:center}
+.dl-note{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.dl-soon{margin-top:26px;border:1px dashed var(--dim);padding:16px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--ink-2);background:var(--paper-2)}
+.dl-soon b{color:var(--red);letter-spacing:.1em;text-transform:uppercase;font-size:11.5px}
+
+/* appendix terminals */
+.install-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:44px}
 @media(max-width:820px){.install-grid{grid-template-columns:1fr}}
-.term{
-  background:var(--ink);border-radius:6px;border:2px solid var(--ink);
-  font-family:var(--mono);font-size:13.5px;color:#E9E2D2;overflow:hidden;
-}
-.term-head{background:#2A2622;padding:10px 16px;font-size:12px;color:#8F887B;display:flex;justify-content:space-between;align-items:center}
-.term-copy{cursor:pointer;background:none;border:1px solid #4A443C;color:#B9B2A4;font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:3px}
-.term-copy:hover{color:var(--paper);border-color:var(--paper)}
-.term pre{padding:20px 18px 24px;line-height:1.9;overflow-x:auto}
-.term .c{color:#8F887B}
-.term .r{color:#E8B34B}
-.install-note{font-size:15px;color:var(--ink-soft);margin-top:14px}
-.install-note code{font-family:var(--mono);font-size:13px;background:var(--paper-deep);padding:1px 6px;border-radius:3px}
+.appendix-label{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.term{background:#111009;font-family:var(--mono);font-size:13.5px;color:#EFE9DB;border:1px solid #111009}
+:root[data-theme="dark"] .term{border-color:var(--rule)}
+.term-head{border-bottom:1px solid #3B372E;padding:10px 16px;font-size:11.5px;color:#98917F;display:flex;justify-content:space-between;align-items:center;letter-spacing:.1em;text-transform:uppercase}
+.term-copy{cursor:pointer;background:none;border:1px solid #4A443C;color:#B5AE9D;font-family:var(--mono);font-size:11px;padding:3px 10px}
+.term-copy:hover{color:var(--sheet);border-color:var(--sheet)}
+.term pre{padding:18px 18px 22px;line-height:1.9;overflow-x:auto}
+.term .c{color:#98917F}
+.term .r{color:#E0A73F}
+.install-note{font-size:14.5px;color:var(--ink-2);margin-top:12px}
+.install-note code{font-family:var(--mono);font-size:13px;background:var(--paper-2);padding:1px 6px}
 
-/* footer */
-footer{border-top:2px solid var(--ink);padding:38px 0 56px;margin-top:40px}
-.foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:18px;font-family:var(--mono);font-size:13px;color:var(--dim)}
-.foot a{color:var(--ink-soft)}
-.foot a:hover{color:var(--stamp)}
+/* footer certification */
+footer{border-top:1px solid var(--ink);margin-top:30px}
+.cert{padding:44px 0 18px;max-width:640px}
+.cert p{font-family:var(--mono);font-size:13px;color:var(--ink-2);line-height:2}
+.cert .sig{font-family:var(--slab);font-style:italic;font-size:22px;margin-top:14px}
+.foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;font-family:var(--mono);font-size:12.5px;color:var(--dim);padding:22px 0 46px;border-top:1px solid var(--rule);margin-top:26px}
+.foot a{color:var(--ink-2)}
+.foot a:hover{color:var(--red)}
+
+/* ---------- mobile polish ---------- */
+@media(max-width:660px){
+  .hero{padding-top:48px;padding-bottom:60px}
+  section{padding:60px 0}
+  .statement{padding:26px 22px;border-left-width:4px}
+  .seal{width:86px;height:86px;right:-6px;bottom:-18px}
+  .case-line span:nth-child(2){display:none}
+  .d-act{font-size:18px;padding:18px 18px}
+  .d-desc{padding:18px 20px}
+  .qa{font-size:14.5px}
+  .cert{padding-top:34px}
+}
+@media(max-width:520px){
+  .cta-row{flex-direction:column;align-items:stretch}
+  .btn{justify-content:center}
+  .exhibit-title{flex-direction:column;gap:2px}
+}
 
 /* reveals */
-.rv{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+.rv{opacity:0;transform:translateY(16px);transition:opacity .55s ease,transform .55s ease}
 .rv.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){
   .rv{opacity:1;transform:none;transition:none}
-  .ribbon-track{animation:none;width:auto;flex-wrap:wrap;justify-content:center;padding:0 20px}
-  .ribbon-set:nth-child(2){display:none}
-  .tb-line .caret{animation:none}
+  .f-track{animation:none;width:auto;flex-wrap:wrap}
+  .f-set:nth-child(2){display:none}
+  .caret{animation:none}
 }
 </style>
 </head>
 <body>
 
-<div class="wrap">
 <header>
-  <a class="brand" href="#">
-    <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#1C1917"/><path d="M14 32h4v-8h4v16h4V20h4v24h4V16h4v20h4V24h4v12h4" stroke="#F6F1E7" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="50" cy="50" r="9" fill="#C42B1C"/><path d="M50 45v7m0 0l-3-3m3 3l3-3" stroke="#F6F1E7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    StenoDrop
-  </a>
-  <nav class="nav">
-    <a href="#how">How it works</a>
-    <a href="#features">Features</a>
-    <a href="#install">Install</a>
-    <a href="https://github.com/fahdi/stenodrop">GitHub</a>
-  </nav>
+  <div class="wrap head-in">
+    <a class="brand" href="#">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#17150F"/><path d="M14 32h4v-8h4v16h4V20h4v24h4V16h4v20h4V24h4v12h4" stroke="#FAF7F0" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="50" cy="50" r="9" fill="#B3261E"/><path d="M50 45v7m0 0l-3-3m3 3l3-3" stroke="#FAF7F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      StenoDrop
+    </a>
+    <nav class="nav">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a class="nav-key" href="#download">Download</a>
+      <a class="nav-key" href="https://github.com/fahdi/stenodrop">GitHub</a>
+      <button class="theme-btn" id="theme-btn" aria-live="polite"></button>
+    </nav>
+  </div>
+  <div class="wrap"><div class="case-line">
+    <span>IN THE MATTER OF: YOUR UNREAD AUDIO</span>
+    <span>CASE NO. ∞ VOICE MEMOS</span>
+    <span>FILED: LOCALLY, ALWAYS</span>
+  </div></div>
 </header>
-</div>
 
 <div class="wrap hero">
-  <div class="hero-ghost" aria-hidden="true">STENO</div>
   <div class="hero-grid">
     <div>
-      <div class="kicker">Batch transcription for macOS</div>
-      <h1>Drop a folder.<br>Read <span class="drop">everything.</span></h1>
-      <p class="sub">Every audio file becomes a <strong>.txt transcript</strong>, saved right next to it. No uploads, no accounts, no per-minute fees.</p>
-      <p class="meta-line">offline · private · free — whisper.cpp on your own Mac</p>
-      <div class="cta-row">
-        <a class="btn btn-primary" href="https://github.com/fahdi/stenodrop/releases/latest">↓ Download for Mac</a>
-        <a class="btn btn-ghost" href="#install">Build from source</a>
-        <span class="free-tag">$0 forever</span>
+      <div class="kicker rv in">Batch transcription · offline &amp; free</div>
+      <h1 class="rv in">Drop a folder.<br>Read <em>everything.</em></h1>
+      <div class="qa rv in">
+        <p><b>Q.</b>&nbsp; I have two hundred recordings I've never listened to.</p>
+        <p><b>A.</b>&nbsp; Drop the folder. Every file becomes a .txt transcript, saved right beside it.</p>
+      </div>
+      <p class="meta-line rv in">no uploads · no accounts · no per-minute fees — Whisper on your own machine</p>
+      <div class="cta-row rv in">
+        <a class="btn btn-primary" href="#download">↓ Download free</a>
+        <a class="btn btn-ghost" href="#how">See the record</a>
       </div>
     </div>
-    <div>
-      <div class="tape-card">
-        <div class="tape-head"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;queue — 8 files</div>
-        <div class="tape-body">
-          <div><span class="tb-file">interview-lahore.m4a</span> <span class="tb-arrow">──▶</span> <span class="tb-dim">interview-lahore.txt</span></div>
-          <div class="tb-line tb-urdu" id="line-ur"></div>
-          <div class="tb-line" id="line-en"></div>
-          <div class="tb-dim" id="line-stat"></div>
+    <div class="pleading exhibit rv in">
+      <div class="gutter" aria-hidden="true"></div>
+      <div style="padding-left:52px">
+        <div class="exhibit-title"><span>Transcript of proceedings</span><b>QUEUE — 8 FILES</b></div>
+        <div class="t-lines">
+          <div class="t-line"><div class="t-body t-file"><b>interview-lahore.m4a</b> <span class="to">→</span> .txt</div></div>
+          <div class="t-line"><div class="t-body t-ur" id="line-ur"></div></div>
+          <div class="t-line"><div class="t-body" id="line-en"></div></div>
+          <div class="t-line"><div class="t-body t-dim" id="line-stat"></div></div>
         </div>
-        <div class="tape-stamp">Transcribed ✓</div>
+      </div>
+      <div class="seal" aria-hidden="true">
+        <svg viewBox="0 0 110 110">
+          <circle cx="55" cy="55" r="52" fill="var(--sheet)" stroke="currentColor" stroke-width="2"/>
+          <circle cx="55" cy="55" r="40" fill="none" stroke="currentColor" stroke-width="1"/>
+          <path id="sealArc" d="M55,55 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0" fill="none"/>
+          <text font-family="Courier Prime,monospace" font-size="10.5" letter-spacing="2.5" fill="currentColor">
+            <textPath href="#sealArc">TRANSCRIBED ON DEVICE · NOTHING UPLOADED ·</textPath>
+          </text>
+          <text x="55" y="52" text-anchor="middle" font-family="Courier Prime,monospace" font-weight="700" font-size="13" fill="currentColor">FREE</text>
+          <text x="55" y="66" text-anchor="middle" font-family="Courier Prime,monospace" font-size="9" fill="currentColor">✓ CERTIFIED</text>
+        </svg>
       </div>
     </div>
   </div>
 </div>
 
-<div class="ribbon" aria-label="Supported formats: wav, mp3, m4a, flac, ogg, opus, aiff, caf, voice memos, mp4, mov, webm">
-  <div class="ribbon-track">
-    <div class="ribbon-set">
-      <i class="chip">WAV</i><i class="chip">MP3</i><i class="chip">M4A</i><i class="chip">FLAC</i><i class="chip">OGG</i><i class="chip">OPUS</i><i class="chip">AIFF</i><i class="chip">CAF</i><i class="chip">VOICE MEMOS</i><i class="chip">MP4</i><i class="chip">MOV</i><i class="chip">WEBM</i>
-      <i class="chip-note">100 languages · translate to English · runs on Metal</i>
+<div class="formats" aria-label="Supported formats: wav, mp3, m4a, flac, ogg, opus, aiff, caf, voice memos, mp4, mov, webm">
+  <div class="f-track">
+    <div class="f-set">
+      <span class="f-item">WAV</span><span class="f-item">MP3</span><span class="f-item">M4A</span><span class="f-item">FLAC</span><span class="f-item">OGG</span><span class="f-item">OPUS</span><span class="f-item">AIFF</span><span class="f-item">CAF</span><span class="f-item">VOICE MEMOS</span><span class="f-item">MP4</span><span class="f-item">MOV</span><span class="f-item">WEBM</span>
+      <span class="f-note">100 languages · translate to English · runs locally</span>
     </div>
-    <div class="ribbon-set" aria-hidden="true">
-      <i class="chip">WAV</i><i class="chip">MP3</i><i class="chip">M4A</i><i class="chip">FLAC</i><i class="chip">OGG</i><i class="chip">OPUS</i><i class="chip">AIFF</i><i class="chip">CAF</i><i class="chip">VOICE MEMOS</i><i class="chip">MP4</i><i class="chip">MOV</i><i class="chip">WEBM</i>
-      <i class="chip-note">100 languages · translate to English · runs on Metal</i>
+    <div class="f-set" aria-hidden="true">
+      <span class="f-item">WAV</span><span class="f-item">MP3</span><span class="f-item">M4A</span><span class="f-item">FLAC</span><span class="f-item">OGG</span><span class="f-item">OPUS</span><span class="f-item">AIFF</span><span class="f-item">CAF</span><span class="f-item">VOICE MEMOS</span><span class="f-item">MP4</span><span class="f-item">MOV</span><span class="f-item">WEBM</span>
+      <span class="f-note">100 languages · translate to English · runs locally</span>
     </div>
   </div>
 </div>
 
 <div class="wrap">
 <section id="how">
-  <div class="sec-label rv">How it works</div>
-  <h2 class="rv">Three steps. The third one is waiting.</h2>
-  <div class="steps rv">
-    <div class="step">
-      <span class="step-num">01</span>
-      <h3>Drop</h3>
-      <p>Drag audio files — or a whole folder of them — onto the window. StenoDrop digs through subfolders and queues every audio file it finds.</p>
+  <div class="sec-label rv">The procedure</div>
+  <h2 class="rv">Three entries on the docket.</h2>
+  <div class="docket rv">
+    <div class="d-row">
+      <div class="d-no">ENTRY 01</div>
+      <div class="d-act">Drop</div>
+      <div class="d-desc">Drag audio files — or a whole folder — onto the window. StenoDrop searches subfolders and queues every audio file it finds.</div>
     </div>
-    <div class="step">
-      <span class="step-num">02</span>
-      <h3>Transcribe</h3>
-      <p>Whisper runs locally on Apple&nbsp;silicon via Metal. A five-second clip takes under a second; nothing ever touches the network.</p>
+    <div class="d-row">
+      <div class="d-no">ENTRY 02</div>
+      <div class="d-act">Transcribe</div>
+      <div class="d-desc">Whisper runs on your machine — Metal-accelerated on Apple silicon. A five-second clip takes under a second. Nothing touches the network.</div>
     </div>
-    <div class="step">
-      <span class="step-num">03</span>
-      <h3>Read</h3>
-      <p>Each transcript lands as <code>name.txt</code> beside its audio file — plus it's right there in the app to copy or reveal in Finder.</p>
+    <div class="d-row">
+      <div class="d-no">ENTRY 03</div>
+      <div class="d-act">Read</div>
+      <div class="d-desc">Each transcript is entered as <code>name.txt</code> beside its audio file — and kept in the app to copy or reveal in Finder.</div>
     </div>
   </div>
 </section>
 
 <section id="features">
-  <div class="sec-label rv">Why StenoDrop</div>
-  <h2 class="rv">A stenographer that lives on your Mac.</h2>
-  <p class="lede rv">Cloud transcription services charge by the minute and read your audio on their servers. StenoDrop does the same job on your machine, for nothing.</p>
-  <div class="cards rv">
-    <div class="card" data-i="PRIVATE"><h3>Nothing leaves your Mac</h3><p>Audio, transcripts, everything — processed and stored locally. Airplane mode works fine.</p></div>
-    <div class="card" data-i="BATCH"><h3>Folders, not files</h3><p>Point it at a year of voice memos. It queues everything, works through the list, and skips what it's already seen in the batch.</p></div>
-    <div class="card" data-i="اردو"><h3 class="ur">Urdu → English, built in</h3><p>First-class Urdu support with one-toggle translation to English — or keep the original script. 100 languages total.</p></div>
-    <div class="card" data-i="FORMATS"><h3>Any audio you have</h3><p>wav, mp3, m4a, flac, opus, voice memos — even the audio track of videos. ffmpeg normalizes everything first.</p></div>
-    <div class="card" data-i="FREE"><h3>$0, no strings</h3><p>Open source, no account, no trial, no per-minute meter. The Whisper model downloads once (~466&nbsp;MB) and it's yours.</p></div>
-    <div class="card" data-i="FAST"><h3>Metal-accelerated</h3><p>whisper.cpp runs on the GPU. Batches that would cost hours of upload time finish while you make tea.</p></div>
+  <div class="sec-label rv">The exhibits</div>
+  <h2 class="rv">A stenographer that lives on your machine.</h2>
+  <p class="lede rv">Cloud services charge by the minute and read your audio on their servers. StenoDrop does the same work locally, for nothing.</p>
+  <div class="exhibits rv">
+    <div class="ex"><div class="ex-tag">Exhibit A — Private</div><h3>Nothing leaves your machine</h3><p>Audio, transcripts, everything — processed and stored locally. Airplane mode works fine.</p></div>
+    <div class="ex"><div class="ex-tag">Exhibit B — Batch</div><h3>Folders, not files</h3><p>Point it at a year of voice memos. It queues everything, works through the list, skips duplicates.</p></div>
+    <div class="ex"><div class="ex-tag">Exhibit C — اردو</div><h3 class="ur">Urdu → English, built in</h3><p>First-class Urdu with one-toggle translation to English — or keep the original script. 100 languages total.</p></div>
+    <div class="ex"><div class="ex-tag">Exhibit D — Formats</div><h3>Any audio you have</h3><p>wav, mp3, m4a, flac, opus, voice memos — even the audio track of videos.</p></div>
+    <div class="ex"><div class="ex-tag">Exhibit E — Free</div><h3>$0, no strings</h3><p>Open source. No account, no trial, no meter. The Whisper model downloads once (~466 MB) and it's yours.</p></div>
+    <div class="ex"><div class="ex-tag">Exhibit F — Fast</div><h3>Hardware-accelerated</h3><p>Batches that would cost hours of upload time finish while you make tea.</p></div>
   </div>
 
-  <div class="langs rv">
-    <h3>Speak in any language.<br><em>Read it in English.</em></h3>
-    <p>Whisper's translate mode turns <strong>Urdu, Hindi, Arabic, Punjabi, Pashto</strong> — any of 100 languages — into clean English text. Or switch translation off and keep the transcript in its original script. Force a specific language when short clips fool auto-detection.</p>
+  <div class="statement rv">
+    <h3>Speak in any language. <em>Read it in English.</em></h3>
+    <p>Whisper's translate mode turns Urdu, Hindi, Arabic, Punjabi, Pashto — any of 100 languages — into clean English text. Or switch translation off and keep the original script. Force a specific language when short clips fool auto-detection.</p>
   </div>
 </section>
 
-<section id="install">
-  <div class="sec-label rv">Install</div>
-  <h2 class="rv">Running in two minutes.</h2>
+<section id="download">
+  <div class="sec-label rv">Download</div>
+  <h2 class="rv">Enter it into the record.</h2>
+  <p class="lede rv">Free on every desktop. Your platform is highlighted.</p>
+  <div class="dl-cards rv">
+    <div class="dl" id="dl-mac">
+      <div class="dl-os"><h3>macOS</h3><span class="dl-badge live">Available</span></div>
+      <p>Native Swift app for macOS 14+. Fastest of the family — Metal-accelerated, plus in-app recording.</p>
+      <a class="btn btn-primary" id="mac-link" href="https://github.com/fahdi/stenodrop/releases/latest">↓ Download for Mac</a>
+      <span class="dl-note">Unsigned beta: right-click → Open the first time.</span>
+    </div>
+    <div class="dl" id="dl-win">
+      <div class="dl-os"><h3>Windows</h3><span class="dl-badge" id="win-badge">Beta soon</span></div>
+      <p>Windows 10/11 installer. Same engine, same rule: your audio never leaves the machine.</p>
+      <a class="btn btn-ghost" id="win-link" href="https://github.com/fahdi/stenodrop/releases">Get from releases</a>
+      <span class="dl-note">SmartScreen may warn on unsigned betas — “More info → Run anyway”.</span>
+    </div>
+    <div class="dl" id="dl-linux">
+      <div class="dl-os"><h3>Linux</h3><span class="dl-badge" id="linux-badge">Beta soon</span></div>
+      <p>AppImage and .deb. If your distro can play a sound, it can transcribe one.</p>
+      <a class="btn btn-ghost" id="linux-link" href="https://github.com/fahdi/stenodrop/releases">Get from releases</a>
+      <span class="dl-note">chmod +x the AppImage and run.</span>
+    </div>
+  </div>
+  <div class="dl-soon rv"><b>Coming soon</b><span>StenoDrop for iPhone &amp; Android — same promise: on-device, private, free. Watch the <a href="https://github.com/fahdi/stenodrop">repository</a> for the announcement.</span></div>
+
   <div class="install-grid rv">
     <div>
+      <div class="appendix-label">Appendix A — macOS prerequisites</div>
       <div class="term">
-        <div class="term-head"><span>download — recommended</span><button class="term-copy" data-copy="brew install whisper-cpp ffmpeg">copy brew line</button></div>
-        <pre><span class="c"># 1. free engine + audio converter</span>
+        <div class="term-head"><span>engine install</span><button class="term-copy" data-copy="brew install whisper-cpp ffmpeg">copy</button></div>
+        <pre><span class="c"># free engine + audio converter</span>
 brew install whisper-cpp ffmpeg
 
-<span class="c"># 2. grab the app zip, unzip, move to Applications</span>
-<span class="r">github.com/fahdi/stenodrop/releases</span>
-
-<span class="c"># 3. unsigned build — clear quarantine once</span>
+<span class="c"># unsigned beta — clear quarantine once</span>
 xattr -cr /Applications/StenoDrop.app</pre>
       </div>
-      <p class="install-note">First launch offers a one-click download of the Whisper model (~466&nbsp;MB). After that you're fully offline.</p>
+      <p class="install-note">First launch offers a one-click Whisper model download (~466&nbsp;MB). After that you're fully offline. Windows &amp; Linux builds bundle the engine — no prerequisites.</p>
     </div>
     <div>
+      <div class="appendix-label">Appendix B — build from source</div>
       <div class="term">
-        <div class="term-head"><span>build from source</span><button class="term-copy" data-copy="git clone https://github.com/fahdi/stenodrop.git && cd stenodrop/mac && ./scripts/make-app.sh">copy</button></div>
+        <div class="term-head"><span>any platform</span><button class="term-copy" data-copy="git clone https://github.com/fahdi/stenodrop.git && cd stenodrop/mac && ./scripts/make-app.sh">copy</button></div>
         <pre>git clone https://github.com/fahdi/stenodrop.git
-cd stenodrop/mac
-./scripts/make-app.sh
-<span class="c"># → dist/StenoDrop.app, ad-hoc signed</span>
-cp -R dist/StenoDrop.app /Applications/</pre>
+<span class="c"># macOS (Swift):</span>
+cd stenodrop/mac &amp;&amp; ./scripts/make-app.sh
+<span class="c"># Windows / Linux (Tauri + Rust):</span>
+cd stenodrop/desktop &amp;&amp; cargo tauri build</pre>
       </div>
-      <p class="install-note">Plain Swift Package — no Xcode project. Requires macOS&nbsp;14+ and Xcode command-line tools.</p>
+      <p class="install-note">Open source — audit it, fork it, or send a PR. The <a href="https://github.com/fahdi/stenodrop">repository</a> has per-platform build docs.</p>
     </div>
   </div>
 </section>
 </div>
 
 <footer>
-  <div class="wrap foot">
-    <span>StenoDrop — free offline batch transcription for macOS</span>
-    <span><a href="https://github.com/fahdi/stenodrop">GitHub</a> · <a href="https://github.com/fahdi/stenodrop/issues">Issues</a> · built on <a href="https://github.com/ggerganov/whisper.cpp">whisper.cpp</a></span>
-    <span>made by <a href="https://fahdmurtaza.com">Fahd Murtaza</a></span>
+  <div class="wrap">
+    <div class="cert rv">
+      <p>I hereby certify that the foregoing software is free of charge, free of accounts, and free of telemetry; that audio processed by it remains on the machine of the operator; and that the transcripts produced are entered as .txt beside their sources.</p>
+      <p class="sig">— StenoDrop</p>
+    </div>
+    <div class="foot">
+      <span>StenoDrop — free offline batch transcription</span>
+      <span><a href="https://github.com/fahdi/stenodrop">GitHub</a> · <a href="https://github.com/fahdi/stenodrop/issues">Issues</a> · built on <a href="https://github.com/ggerganov/whisper.cpp">whisper.cpp</a></span>
+      <span>made by <a href="https://fahdmurtaza.com">Fahd Murtaza</a></span>
+    </div>
   </div>
 </footer>
 
 <script>
-// scroll reveals
+// reveals
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
 document.querySelectorAll('.rv').forEach(el=>io.observe(el));
 
@@ -412,9 +470,9 @@ document.querySelectorAll('.term-copy').forEach(b=>b.addEventListener('click',()
   navigator.clipboard.writeText(b.dataset.copy).then(()=>{const t=b.textContent;b.textContent='copied ✓';setTimeout(()=>b.textContent=t,1400)});
 }));
 
-// tape typewriter
+// transcript typewriter
 const urText='آج ہم پروجیکٹ کی ٹائم لائن پر بات کریں گے۔';
-const enText='Today we will talk about the project timeline.';
+const enText='↳ Today we will talk about the project timeline.';
 const statText='8 files · queue done in 41s · saved beside sources';
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function type(el,text,speed){return new Promise(res=>{
@@ -428,16 +486,56 @@ async function loop(){
   const ur=document.getElementById('line-ur'),en=document.getElementById('line-en'),st=document.getElementById('line-stat');
   for(;;){
     ur.textContent='';en.textContent='';st.textContent='';
-    await type(ur,urText,34);
-    await new Promise(r=>setTimeout(r,350));
-    await type(en,'↳ '+enText,22);
+    await type(ur,urText,36);
     await new Promise(r=>setTimeout(r,400));
+    await type(en,enText,24);
+    await new Promise(r=>setTimeout(r,450));
     st.textContent=statText;
     if(reduce)break;
-    await new Promise(r=>setTimeout(r,5200));
+    await new Promise(r=>setTimeout(r,6500));
   }
 }
 loop();
+
+// theme toggle: manual override persists; returning to the auto value clears it
+const themeBtn=document.getElementById('theme-btn');
+const autoTheme=()=>{const h=new Date().getHours();return(h>=7&&h<19)?'light':'dark'};
+function paintTheme(){
+  const t=document.documentElement.dataset.theme;
+  themeBtn.textContent=t==='dark'?'☾ Night session':'☀ Day session';
+  themeBtn.setAttribute('aria-label','Switch to '+(t==='dark'?'day':'night')+' theme');
+  document.querySelector('meta[name="theme-color"]').setAttribute('content',t==='dark'?'#141209':'#FAF7F0');
+}
+themeBtn.addEventListener('click',()=>{
+  const next=document.documentElement.dataset.theme==='dark'?'light':'dark';
+  document.documentElement.dataset.theme=next;
+  try{next===autoTheme()?localStorage.removeItem('sd-theme'):localStorage.setItem('sd-theme',next)}catch(e){}
+  paintTheme();
+});
+paintTheme();
+
+// OS detect highlight
+(function(){
+  const ua=navigator.userAgent, p=navigator.platform||'';
+  let id='dl-mac';
+  if(/Win/i.test(p)||/Windows/i.test(ua))id='dl-win';
+  else if(/Linux/i.test(p)&&!/Android/i.test(ua))id='dl-linux';
+  document.getElementById(id)?.classList.add('detected');
+})();
+
+// wire download links to latest release assets (auto-upgrades when CI publishes)
+fetch('https://api.github.com/repos/fahdi/stenodrop/releases/latest')
+  .then(r=>r.ok?r.json():null)
+  .then(rel=>{
+    if(!rel||!rel.assets)return;
+    const find=re=>rel.assets.find(a=>re.test(a.name));
+    const mac=find(/\.zip$/i)||find(/\.dmg$/i);
+    const win=find(/\.(exe|msi)$/i);
+    const lin=find(/\.(AppImage|deb)$/i);
+    if(mac)document.getElementById('mac-link').href=mac.browser_download_url;
+    if(win){const l=document.getElementById('win-link');l.href=win.browser_download_url;l.textContent='↓ Download for Windows';l.classList.remove('btn-ghost');l.classList.add('btn-primary');document.getElementById('win-badge').textContent='Available';document.getElementById('win-badge').classList.add('live')}
+    if(lin){const l=document.getElementById('linux-link');l.href=lin.browser_download_url;l.textContent='↓ Download for Linux';l.classList.remove('btn-ghost');l.classList.add('btn-primary');document.getElementById('linux-badge').textContent='Available';document.getElementById('linux-badge').classList.add('live')}
+  }).catch(()=>{});
 </script>
 </body>
 </html>

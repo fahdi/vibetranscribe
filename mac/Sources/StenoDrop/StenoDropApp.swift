@@ -13,11 +13,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        if JobQueue.shared.hasActiveWork {
+        if JobQueue.shared.hasActiveWork || RecordingController.activeSession {
             let alert = NSAlert()
-            alert.messageText = "Transcription in progress"
-            alert.informativeText =
-                "Files still in the queue won't be transcribed if you quit now."
+            alert.messageText = RecordingController.activeSession
+                ? "Recording in progress" : "Transcription in progress"
+            alert.informativeText = RecordingController.activeSession
+                ? "The current recording will be lost if you quit now."
+                : "Files still in the queue won't be transcribed if you quit now."
             alert.addButton(withTitle: "Quit Anyway")
             alert.addButton(withTitle: "Keep Transcribing")
             if alert.runModal() != .alertFirstButtonReturn {

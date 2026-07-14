@@ -5,6 +5,10 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @EnvironmentObject var queue: JobQueue
     @State private var isDropTargeted = false
+    // Owned here (not by the sheet) so an active recording survives the
+    // sheet's view identity; dismissal is blocked while recording anyway.
+    @StateObject private var recorder = RecordingController()
+    @State private var showRecorder = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +31,10 @@ struct ContentView: View {
         }
         .animation(.default, value: queue.notice)
         .onDrop(of: [.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)
+        .sheet(isPresented: $showRecorder) {
+            RecordingView(recorder: recorder)
+                .environmentObject(queue)
+        }
         .overlay {
             if isDropTargeted {
                 RoundedRectangle(cornerRadius: 10)
@@ -55,6 +63,12 @@ struct ContentView: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .help("On: any language → English. Off: transcript stays in the spoken language.")
+            Button {
+                showRecorder = true
+            } label: {
+                Label("Record", systemImage: "record.circle")
+            }
+            .help("Record from the microphone with live transcription.")
             Button {
                 chooseFolder()
             } label: {
