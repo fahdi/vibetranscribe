@@ -1,0 +1,19 @@
+# StenoDrop
+
+> StenoDrop is a free, open-source batch audio transcription app for macOS,
+> Windows, and Linux. Users drag in audio files or whole folders; every file
+> is transcribed locally (Whisper small model) and saved as a .txt transcript
+> next to its source. Nothing is uploaded — it works fully offline.
+
+Key facts:
+- Price: free, no account, no usage limits, open source (github.com/fahdi/stenodrop)
+- Platforms: native Swift app for macOS 14+; Tauri (Rust) app for Windows 10+ and Linux; mobile planned
+- Languages: ~100 via Whisper, including first-class Urdu; optional one-toggle translation to English
+- Formats: wav, mp3, m4a, flac, ogg, opus, aiff, caf, voice memos, and audio tracks of mp4/mov/webm video
+- Output: <filename>.txt written beside each audio file; transcripts also viewable/copyable in the app
+- Privacy: all processing on-device; the Whisper model (~466 MB) downloads once on first run
+- macOS extras: live recording with rolling transcription, Metal GPU acceleration
+- macOS prerequisites: brew install whisper-cpp ffmpeg; Windows/Linux builds bundle the engine
+
+Downloads: https://github.com/fahdi/stenodrop/releases/latest
+Site: https://fahdi.github.io/stenodrop/
