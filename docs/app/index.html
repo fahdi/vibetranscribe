@@ -112,6 +112,8 @@ select{
 }
 .toggle-row{display:flex;align-items:center;gap:10px;cursor:pointer}
 .toggle-row input{width:18px;height:18px;accent-color:var(--red)}
+.output-list{display:flex;flex-direction:column;gap:8px}
+.output-list .toggle-row{font-size:13.5px}
 
 /* ---------- drop zone ---------- */
 .drop-zone{
@@ -218,8 +220,11 @@ footer{border-top:1px solid var(--ink);margin-top:30px}
       <select id="language-select"></select>
     </div>
     <div class="control">
-      <label>&nbsp;</label>
-      <label class="toggle-row"><input type="checkbox" id="translate-toggle" checked> Translate to English</label>
+      <label>Outputs</label>
+      <div class="output-list">
+        <label class="toggle-row"><input type="checkbox" id="output-original" checked> Original language transcript</label>
+        <label class="toggle-row"><input type="checkbox" id="output-english" checked> English translation</label>
+      </div>
     </div>
   </div>
 

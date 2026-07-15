@@ -73,34 +73,54 @@ getTranscriber().catch((err) => {
   self.postMessage({ type: "error", jobId: null, error: String(err && err.message ? err.message : err) });
 });
 
+/** Run one Whisper inference pass and return the flattened text. */
+async function runInference(transcriber, audio, language, task) {
+  // chunk_length_s/stride_length_s are only needed for audio longer than
+  // Whisper's native 30s window; only pass them when the clip actually
+  // exceeds that, so short clips take the plain (non-chunked) path.
+  const durationSeconds = audio.length / 16000;
+  const chunkOpts =
+    durationSeconds > 30 ? { chunk_length_s: 30, stride_length_s: 5 } : {};
+
+  const result = await transcriber(audio, {
+    language: language === "auto" ? null : language,
+    task,
+    ...chunkOpts,
+  });
+
+  const text = Array.isArray(result) ? result.map((r) => r.text).join(" ") : result.text;
+  return (text || "").trim();
+}
+
 self.onmessage = async (event) => {
   const msg = event.data;
   if (!msg || msg.type !== "transcribe") return;
 
-  const { jobId, audio, language, translate } = msg;
+  // `outputs` is which transcript variants the caller wants back:
+  // "original" -> Whisper's plain "transcribe" task (spoken language, untranslated)
+  // "english"  -> Whisper's "translate" task (always translates into English)
+  // Whisper cannot target any other output language, so these two tasks are
+  // the only ones that ever exist. When both are requested we simply run the
+  // pipeline twice over the same decoded audio, once per task.
+  const { jobId, audio, language, outputs } = msg;
+  const wantOriginal = !outputs || outputs.includes("original");
+  const wantEnglish = !!(outputs && outputs.includes("english"));
 
   try {
     const transcriber = await getTranscriber();
+    const texts = {};
 
-    // chunk_length_s/stride_length_s are only needed for audio longer than
-    // Whisper's native 30s window; only pass them when the clip actually
-    // exceeds that, so short clips take the plain (non-chunked) path.
-    const durationSeconds = audio.length / 16000;
-    const chunkOpts =
-      durationSeconds > 30 ? { chunk_length_s: 30, stride_length_s: 5 } : {};
-
-    const result = await transcriber(audio, {
-      language: language === "auto" ? null : language,
-      task: translate ? "translate" : "transcribe",
-      ...chunkOpts,
-    });
-
-    const text = Array.isArray(result) ? result.map((r) => r.text).join(" ") : result.text;
+    if (wantOriginal) {
+      texts.original = await runInference(transcriber, audio, language, "transcribe");
+    }
+    if (wantEnglish) {
+      texts.english = await runInference(transcriber, audio, language, "translate");
+    }
 
     self.postMessage({
       type: "done",
       jobId,
-      text: (text || "").trim(),
+      texts,
       device: activeDevice,
     });
   } catch (err) {

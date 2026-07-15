@@ -36,6 +36,53 @@ const AUDIO_EXTENSIONS = new Set([
 
 const WHISPER_SAMPLE_RATE = 16000;
 
+// ---------- settings persistence ----------
+// Whisper can only ever produce two kinds of output for a given clip: a
+// transcript in the audio's original spoken language, or an English
+// translation. It cannot target any other language, so the output picker is
+// just those two checkboxes (see worker.js for the inference side of this).
+const SETTINGS_KEY = "stenodrop-web-settings";
+const DEFAULT_SETTINGS = { language: "auto", outputs: { original: true, english: true } };
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return { ...DEFAULT_SETTINGS, outputs: { ...DEFAULT_SETTINGS.outputs } };
+    const parsed = JSON.parse(raw);
+    const outputs = {
+      original: !!(parsed.outputs && parsed.outputs.original),
+      english: !!(parsed.outputs && parsed.outputs.english),
+    };
+    if (!outputs.original && !outputs.english) {
+      outputs.original = true;
+      outputs.english = true;
+    }
+    return {
+      language: typeof parsed.language === "string" ? parsed.language : DEFAULT_SETTINGS.language,
+      outputs,
+    };
+  } catch (e) {
+    return { ...DEFAULT_SETTINGS, outputs: { ...DEFAULT_SETTINGS.outputs } };
+  }
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({
+        language: languageSelect.value,
+        outputs: {
+          original: outputOriginal.checked,
+          english: outputEnglish.checked,
+        },
+      })
+    );
+  } catch (e) {
+    // localStorage unavailable (e.g. private browsing) - settings just won't persist.
+  }
+}
+
 // ---------- DOM ----------
 const dropZone = document.getElementById("drop-zone");
 const fileInput = document.getElementById("file-input");
@@ -43,7 +90,8 @@ const folderInput = document.getElementById("folder-input");
 const pickFilesBtn = document.getElementById("pick-files-btn");
 const pickFolderBtn = document.getElementById("pick-folder-btn");
 const languageSelect = document.getElementById("language-select");
-const translateToggle = document.getElementById("translate-toggle");
+const outputOriginal = document.getElementById("output-original");
+const outputEnglish = document.getElementById("output-english");
 const queueEl = document.getElementById("queue");
 const queueSection = document.getElementById("queue-section");
 const downloadAllBtn = document.getElementById("download-all-btn");
@@ -53,7 +101,7 @@ const modelProgressBar = document.getElementById("model-progress-bar");
 const deviceNote = document.getElementById("device-note");
 
 // ---------- state ----------
-/** @type {{id:string, file:File, status:string, text:string, error:string}[]} */
+/** @type {{id:string, file:File, status:string, texts:Object<string,string>, error:string}[]} */
 let jobs = [];
 let jobSeq = 0;
 let isProcessing = false;
@@ -65,9 +113,35 @@ for (const [code, name] of LANGUAGES) {
   const opt = document.createElement("option");
   opt.value = code;
   opt.textContent = name;
-  if (code === "auto") opt.selected = true;
   languageSelect.appendChild(opt);
 }
+
+// ---------- settings: load persisted, wire up saving ----------
+const initialSettings = loadSettings();
+languageSelect.value = initialSettings.language;
+if (languageSelect.value !== initialSettings.language) {
+  // Stored language code no longer exists in the list; fall back cleanly.
+  languageSelect.value = "auto";
+}
+outputOriginal.checked = initialSettings.outputs.original;
+outputEnglish.checked = initialSettings.outputs.english;
+
+// Enforce "at least one output checked" - if the user unchecks the last one,
+// auto-recheck it rather than allowing a zero-output state.
+function enforceAtLeastOneOutput(justChanged) {
+  if (!outputOriginal.checked && !outputEnglish.checked) {
+    justChanged.checked = true;
+  }
+}
+outputOriginal.addEventListener("change", () => {
+  enforceAtLeastOneOutput(outputOriginal);
+  saveSettings();
+});
+outputEnglish.addEventListener("change", () => {
+  enforceAtLeastOneOutput(outputEnglish);
+  saveSettings();
+});
+languageSelect.addEventListener("change", saveSettings);
 
 // ---------- worker ----------
 const worker = new Worker("./worker.js", { type: "module" });
@@ -85,7 +159,7 @@ worker.onmessage = (event) => {
       handleReady(msg.device);
       break;
     case "done":
-      handleDone(msg.jobId, msg.text);
+      handleDone(msg.jobId, msg.texts);
       break;
     case "error":
       handleError(msg.jobId, msg.error);
@@ -140,11 +214,11 @@ function handleReady() {
   pump();
 }
 
-function handleDone(jobId, text) {
+function handleDone(jobId, texts) {
   const job = jobs.find((j) => j.id === jobId);
   if (!job) return;
   job.status = "done";
-  job.text = text;
+  job.texts = texts || {};
   renderQueue();
   isProcessing = false;
   pump();
@@ -177,7 +251,7 @@ function addFiles(fileList) {
   const files = Array.from(fileList).filter((f) => AUDIO_EXTENSIONS.has(extOf(f.name)));
   if (files.length === 0) return;
   for (const file of files) {
-    jobs.push({ id: String(jobSeq++), file, status: "queued", text: "", error: "" });
+    jobs.push({ id: String(jobSeq++), file, status: "queued", texts: {}, error: "" });
   }
   queueSection.hidden = false;
   renderQueue();
@@ -227,6 +301,8 @@ function pump() {
   next.status = "transcribing";
   renderQueue();
 
+  const outputs = selectedOutputs();
+
   decodeToPCM(next.file)
     .then((audio) => {
       worker.postMessage(
@@ -235,7 +311,7 @@ function pump() {
           jobId: next.id,
           audio,
           language: languageSelect.value,
-          translate: translateToggle.checked,
+          outputs,
         },
         [audio.buffer]
       );
@@ -243,6 +319,14 @@ function pump() {
     .catch((err) => {
       handleError(next.id, "Couldn't decode audio: " + (err.message || err));
     });
+}
+
+/** Which output variants ("original", "english") are currently checked. */
+function selectedOutputs() {
+  const outputs = [];
+  if (outputOriginal.checked) outputs.push("original");
+  if (outputEnglish.checked) outputs.push("english");
+  return outputs;
 }
 
 /** Decode an audio File via Web Audio API and resample to 16kHz mono Float32. */
@@ -303,17 +387,21 @@ function renderQueue() {
     actions.className = "q-actions";
 
     if (job.status === "done") {
-      const dlBtn = document.createElement("button");
-      dlBtn.className = "btn-mini";
-      dlBtn.textContent = "↓ .txt";
-      dlBtn.addEventListener("click", () => downloadText(job));
-      actions.appendChild(dlBtn);
+      const files = outputFiles(job);
+      for (const f of files) {
+        const dlBtn = document.createElement("button");
+        dlBtn.className = "btn-mini";
+        dlBtn.textContent = files.length > 1 ? `↓ ${f.label}` : "↓ .txt";
+        dlBtn.addEventListener("click", () => downloadFile(f.name, f.text));
+        actions.appendChild(dlBtn);
+      }
 
       const copyBtn = document.createElement("button");
       copyBtn.className = "btn-mini";
       copyBtn.textContent = "Copy";
       copyBtn.addEventListener("click", () => {
-        navigator.clipboard.writeText(job.text).then(() => {
+        const combined = files.map((f) => (files.length > 1 ? `[${f.label}]\n${f.text}` : f.text)).join("\n\n");
+        navigator.clipboard.writeText(combined).then(() => {
           copyBtn.textContent = "Copied ✓";
           setTimeout(() => (copyBtn.textContent = "Copy"), 1400);
         });
@@ -326,10 +414,14 @@ function renderQueue() {
     row.appendChild(actions);
 
     if (job.status === "done") {
-      const transcript = document.createElement("div");
-      transcript.className = "q-transcript";
-      transcript.textContent = job.text || "(empty transcript)";
-      row.appendChild(transcript);
+      const files = outputFiles(job);
+      for (const f of files) {
+        const transcript = document.createElement("div");
+        transcript.className = "q-transcript";
+        transcript.textContent =
+          (files.length > 1 ? `[${f.label}] ` : "") + (f.text || "(empty transcript)");
+        row.appendChild(transcript);
+      }
     } else if (job.status === "failed") {
       const err = document.createElement("div");
       err.className = "q-error";
@@ -348,17 +440,48 @@ function maybeShowDownloadAll() {
   downloadAllBtn.hidden = !(allDone && anyDone);
 }
 
-function txtName(fileName) {
+function baseName(fileName) {
   const i = fileName.lastIndexOf(".");
-  return (i === -1 ? fileName : fileName.slice(0, i)) + ".txt";
+  return i === -1 ? fileName : fileName.slice(0, i);
 }
 
-function downloadText(job) {
-  const blob = new Blob([job.text], { type: "text/plain;charset=utf-8" });
+function txtName(fileName) {
+  return baseName(fileName) + ".txt";
+}
+
+/**
+ * Build the list of downloadable files for a finished job.
+ *
+ * When only one output was requested, keep today's naming exactly as-is
+ * (`name.txt`) so single-output behavior doesn't change for users who only
+ * want one thing. When both were requested, produce two distinct files,
+ * e.g. `name.txt` (original) and `name (English).txt` (translation), so
+ * neither collides with the single-output convention.
+ */
+function outputFiles(job) {
+  const texts = job.texts || {};
+  const keys = Object.keys(texts);
+  if (keys.length <= 1) {
+    const key = keys[0];
+    return key ? [{ label: "Original", name: txtName(job.file.name), text: texts[key] }] : [];
+  }
+  const base = baseName(job.file.name);
+  const files = [];
+  if ("original" in texts) {
+    files.push({ label: "Original", name: base + ".txt", text: texts.original });
+  }
+  if ("english" in texts) {
+    files.push({ label: "English", name: base + " (English).txt", text: texts.english });
+  }
+  return files;
+}
+
+function downloadFile(name, text) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = txtName(job.file.name);
+  a.download = name;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -369,11 +492,13 @@ async function downloadAllZip() {
   const done = jobs.filter((j) => j.status === "done");
   if (done.length === 0) return;
 
-  const files = done.map((j) => ({
-    name: txtName(j.file.name),
-    lastModified: new Date(),
-    input: j.text,
-  }));
+  const files = done.flatMap((j) =>
+    outputFiles(j).map((f) => ({
+      name: f.name,
+      lastModified: new Date(),
+      input: f.text,
+    }))
+  );
 
   const blob = await downloadZip(files).blob();
   const url = URL.createObjectURL(blob);
