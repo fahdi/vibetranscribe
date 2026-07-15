@@ -1,4 +1,4 @@
-// StenoDrop web app — main thread. Handles file/folder ingestion, audio
+// StenoDrop web app, main thread. Handles file/folder ingestion, audio
 // decode + resample to 16kHz mono (Whisper's required input), the batch
 // queue UI, and downloads (per-file .txt, all-as-.zip). All model work
 // happens in worker.js so this thread never blocks.
@@ -97,16 +97,16 @@ function handleDevice(device) {
   if (device === "wasm") {
     deviceNote.hidden = false;
     deviceNote.textContent =
-      "Note: WebGPU isn't available in this browser, so transcription is running on CPU/WASM — it works, just slower. Chrome/Edge on desktop currently have the best WebGPU support.";
+      "Your browser doesn't support hardware acceleration here, so transcription will run a bit slower. It still works fine. Chrome or Edge on desktop currently offer the fastest experience.";
   } else {
     deviceNote.hidden = false;
-    deviceNote.textContent = "Running on WebGPU (hardware-accelerated).";
+    deviceNote.textContent = "Running with hardware acceleration.";
   }
 }
 
 function handleProgress(progress) {
   if (!progress || progress.status !== "progress" && progress.status !== "initiate" && progress.status !== "done") {
-    // Some progress events (e.g. "ready") don't carry file/loaded data — ignore.
+    // Some progress events (e.g. "ready") don't carry file/loaded data. Ignore them.
   }
   if (progress.file) {
     if (progress.status === "progress") {
@@ -127,12 +127,12 @@ function handleProgress(progress) {
   modelStatus.hidden = false;
   modelProgressBar.style.width = pct + "%";
   modelStatusText.textContent =
-    `Downloading transcription model — ${pct}% (${(loaded / 1e6).toFixed(0)} MB / ${(total / 1e6).toFixed(0)} MB). This happens once; the model is then cached in your browser.`;
+    `Downloading the voice-recognition software, ${pct}% (${(loaded / 1e6).toFixed(0)} MB of ${(total / 1e6).toFixed(0)} MB). This happens once, then it's cached in your browser.`;
 }
 
 function handleReady() {
   modelReady = true;
-  modelStatusText.textContent = "Model ready — transcribing from cache.";
+  modelStatusText.textContent = "Ready. Transcribing from your browser's cache.";
   modelProgressBar.style.width = "100%";
   setTimeout(() => {
     if (modelReady) modelStatus.hidden = true;
@@ -250,7 +250,7 @@ async function decodeToPCM(file) {
   const arrayBuffer = await file.arrayBuffer();
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   // Decode at the file's native rate first (decodeAudioData needs a context,
-  // but we don't need it to run at 16kHz — OfflineAudioContext handles resampling).
+  // but we don't need it to run at 16kHz; OfflineAudioContext handles resampling).
   const probeCtx = new AudioCtx();
   let decoded;
   try {

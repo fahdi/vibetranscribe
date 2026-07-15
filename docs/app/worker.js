@@ -1,7 +1,7 @@
-// StenoDrop web worker — model load + inference, off the main thread.
+// StenoDrop web worker, model load + inference, off the main thread.
 //
 // Engine: @huggingface/transformers (Transformers.js v4), ONNX Runtime Web.
-// Model: onnx-community/whisper-base — multilingual Whisper base, ONNX
+// Model: onnx-community/whisper-base, multilingual Whisper base, ONNX
 // build maintained by the Transformers.js team for browser use (same model
 // used in Hugging Face's own official whisper-webgpu / whisper-word-timestamps
 // example apps). WebGPU device with mixed dtypes (fp32 encoder / q4 decoder)
@@ -11,7 +11,7 @@
 // same multilingual/translate support) but its exported ONNX graph fails
 // under transformers.js 4.2.0 with "Missing the following inputs:
 // cache_position" regardless of decoder dtype (q4/uint8/int8 all fail
-// identically) — this reproduces a known open compatibility issue
+// identically). This reproduces a known open compatibility issue
 // (huggingface/transformers.js#1707). whisper-base does not hit it and was
 // confirmed working end-to-end in a real browser.
 import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0";
@@ -83,7 +83,7 @@ self.onmessage = async (event) => {
     const transcriber = await getTranscriber();
 
     // chunk_length_s/stride_length_s are only needed for audio longer than
-    // Whisper's native 30s window — only pass them when the clip actually
+    // Whisper's native 30s window; only pass them when the clip actually
     // exceeds that, so short clips take the plain (non-chunked) path.
     const durationSeconds = audio.length / 16000;
     const chunkOpts =
