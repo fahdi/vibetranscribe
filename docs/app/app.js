@@ -62,33 +62,38 @@ const CAPTION_EXTENSIONS = new Set(["srt", "vtt"]);
 const WHISPER_SAMPLE_RATE = 16000;
 
 // ---------- settings persistence ----------
-// Whisper can only ever produce two kinds of output for a given clip: a
-// transcript in the audio's original spoken language, or an English
-// translation. It cannot target any other language, so the output picker is
-// just those two checkboxes (see worker.js for the inference side of this).
+// The original-language transcript is always produced. On top of that the
+// user picks any number of target languages; each adds its own output file.
+// Translation runs through the browser's built-in Translator API when it
+// exists; when it doesn't, English (and only English) can still come from
+// Whisper's own translate task (see worker.js), and other languages get a
+// visible per-language note.
 const SETTINGS_KEY = "stenodrop-web-settings";
-const DEFAULT_SETTINGS = { language: "auto", outputs: { original: true, english: true }, mode: "offline" };
+const DEFAULT_SETTINGS = { language: "auto", targets: ["en"], mode: "offline" };
+const KNOWN_TARGETS = new Set(LANGUAGES.map(([code]) => code).filter((code) => code !== "auto"));
 
 function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return { ...DEFAULT_SETTINGS, outputs: { ...DEFAULT_SETTINGS.outputs } };
+    if (!raw) return { ...DEFAULT_SETTINGS, targets: [...DEFAULT_SETTINGS.targets] };
     const parsed = JSON.parse(raw);
-    const outputs = {
-      original: !!(parsed.outputs && parsed.outputs.original),
-      english: !!(parsed.outputs && parsed.outputs.english),
-    };
-    if (!outputs.original && !outputs.english) {
-      outputs.original = true;
-      outputs.english = true;
+    let targets;
+    if (Array.isArray(parsed.targets)) {
+      targets = parsed.targets.filter((code) => KNOWN_TARGETS.has(code));
+    } else if (parsed.outputs && typeof parsed.outputs === "object") {
+      // Migration from the legacy {original, english} checkbox pair:
+      // "English translation" checked becomes the single target "en".
+      targets = parsed.outputs.english ? ["en"] : [];
+    } else {
+      targets = [...DEFAULT_SETTINGS.targets];
     }
     return {
       language: typeof parsed.language === "string" ? parsed.language : DEFAULT_SETTINGS.language,
-      outputs,
+      targets,
       mode: parsed.mode === "cloud" ? "cloud" : "offline",
     };
   } catch (e) {
-    return { ...DEFAULT_SETTINGS, outputs: { ...DEFAULT_SETTINGS.outputs } };
+    return { ...DEFAULT_SETTINGS, targets: [...DEFAULT_SETTINGS.targets] };
   }
 }
 
@@ -98,10 +103,7 @@ function saveSettings() {
       SETTINGS_KEY,
       JSON.stringify({
         language: languageSelect.value,
-        outputs: {
-          original: outputOriginal.checked,
-          english: outputEnglish.checked,
-        },
+        targets: selectedTargets(),
         mode: currentMode,
       })
     );
@@ -117,8 +119,8 @@ const folderInput = document.getElementById("folder-input");
 const pickFilesBtn = document.getElementById("pick-files-btn");
 const pickFolderBtn = document.getElementById("pick-folder-btn");
 const languageSelect = document.getElementById("language-select");
-const outputOriginal = document.getElementById("output-original");
-const outputEnglish = document.getElementById("output-english");
+const targetListEl = document.getElementById("target-list");
+const translatorNote = document.getElementById("translator-note");
 const queueEl = document.getElementById("queue");
 const queueSection = document.getElementById("queue-section");
 const downloadAllBtn = document.getElementById("download-all-btn");
@@ -148,6 +150,43 @@ for (const [code, name] of LANGUAGES) {
   languageSelect.appendChild(opt);
 }
 
+// ---------- target language multi-select ----------
+const targetChecks = new Map();
+for (const [code, name] of LANGUAGES) {
+  if (code === "auto") continue;
+  const label = document.createElement("label");
+  label.className = "toggle-row";
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.value = code;
+  input.addEventListener("change", saveSettings);
+  label.appendChild(input);
+  label.appendChild(document.createTextNode(" " + name));
+  targetChecks.set(code, input);
+  targetListEl.appendChild(label);
+}
+
+/** The target language codes currently checked. Zero targets is a valid
+ * state: the original transcript is always produced regardless. */
+function selectedTargets() {
+  const targets = [];
+  for (const [code, input] of targetChecks) {
+    if (input.checked) targets.push(code);
+  }
+  return targets;
+}
+
+/** True when the browser ships the built-in Translator API (Chrome 138+). */
+function translatorAvailable() {
+  return "Translator" in self;
+}
+
+if (!translatorAvailable()) {
+  translatorNote.hidden = false;
+  translatorNote.textContent =
+    "This browser doesn't include built-in translation (Chrome and Edge on desktop do). English can still come straight from the speech model. Other languages will be skipped with a note on each file.";
+}
+
 // ---------- settings: load persisted, wire up saving ----------
 const initialSettings = loadSettings();
 languageSelect.value = initialSettings.language;
@@ -155,25 +194,12 @@ if (languageSelect.value !== initialSettings.language) {
   // Stored language code no longer exists in the list; fall back cleanly.
   languageSelect.value = "auto";
 }
-outputOriginal.checked = initialSettings.outputs.original;
-outputEnglish.checked = initialSettings.outputs.english;
+for (const code of initialSettings.targets) {
+  const input = targetChecks.get(code);
+  if (input) input.checked = true;
+}
 currentMode = initialSettings.mode;
 
-// Enforce "at least one output checked" - if the user unchecks the last one,
-// auto-recheck it rather than allowing a zero-output state.
-function enforceAtLeastOneOutput(justChanged) {
-  if (!outputOriginal.checked && !outputEnglish.checked) {
-    justChanged.checked = true;
-  }
-}
-outputOriginal.addEventListener("change", () => {
-  enforceAtLeastOneOutput(outputOriginal);
-  saveSettings();
-});
-outputEnglish.addEventListener("change", () => {
-  enforceAtLeastOneOutput(outputEnglish);
-  saveSettings();
-});
 languageSelect.addEventListener("change", saveSettings);
 
 // ---------- mode picker (offline / cloud) ----------
@@ -303,12 +329,8 @@ function handleReady() {
 function handleDone(jobId, texts) {
   const job = jobs.find((j) => j.id === jobId);
   if (!job) return;
-  job.status = "done";
   job.texts = texts || {};
-  renderQueue();
-  isProcessing = false;
-  pump();
-  maybeShowDownloadAll();
+  finishAudioJob(job);
 }
 
 function handleError(jobId, error) {
@@ -397,6 +419,10 @@ function pump() {
   if (!next) return;
 
   isProcessing = true;
+  // Snapshot the settings this job runs with, so mid-job checkbox changes
+  // never produce a mixed result.
+  next.targets = selectedTargets();
+  next.language = languageSelect.value;
 
   if (next.kind === "caption") {
     // Caption files never touch Whisper or the cloud server: parsing and
@@ -416,8 +442,6 @@ function pump() {
     return;
   }
 
-  const outputs = selectedOutputs();
-
   decodeToPCM(next.file)
     .then((audio) => {
       worker.postMessage(
@@ -425,8 +449,8 @@ function pump() {
           type: "transcribe",
           jobId: next.id,
           audio,
-          language: languageSelect.value,
-          outputs,
+          language: next.language,
+          outputs: whisperOutputs(next),
         },
         [audio.buffer]
       );
@@ -437,22 +461,31 @@ function pump() {
 }
 
 /**
+ * Which Whisper tasks a job needs. The original transcript always runs.
+ * Whisper's own translate task can only ever target English; it is kept as
+ * the "en" fallback for browsers without the built-in Translator API. When
+ * the Translator exists, every target (English included) goes through it
+ * instead, off the original transcript.
+ */
+function whisperOutputs(job) {
+  const outputs = ["original"];
+  if (job.targets.includes("en") && !translatorAvailable()) outputs.push("english");
+  return outputs;
+}
+
+/**
  * Run one job through the cloud API instead of the local worker pipeline.
- * Maps the same "original"/"english" output checklist used by Offline mode
- * onto the cloud API's single `translate` boolean: "original" -> one request
- * with translate=false, "english" -> one request with translate=true. When
- * both are checked this fires two independent requests against the same
- * file, matching how the local dual-output feature already works (the
- * worker also runs the pipeline twice, once per task, over the same decoded
- * audio). Requests run in parallel; if one fails and the other succeeds we
+ * The cloud API exposes the same two Whisper tasks as the worker (a single
+ * `translate` boolean), so the request set mirrors whisperOutputs(): the
+ * original transcript always, plus a translate=true request only when "en"
+ * is selected and the built-in Translator is absent. All other target
+ * languages are translated client-side afterwards, exactly like Offline
+ * mode. Requests run in parallel; if one fails and the other succeeds we
  * still record the text we got and surface only the failed half's error.
  */
 async function runCloudJob(job) {
-  const outputs = selectedOutputs();
-  const language = languageSelect.value;
-
-  const requests = outputs.map((kind) =>
-    cloudTranscribe(job.file, language, kind === "english").then(
+  const requests = whisperOutputs(job).map((kind) =>
+    cloudTranscribe(job.file, job.language, kind === "english").then(
       (text) => ({ kind, ok: true, text }),
       (err) => ({ kind, ok: false, error: String(err && err.message ? err.message : err) })
     )
@@ -471,13 +504,13 @@ async function runCloudJob(job) {
     return;
   }
 
-  handleDone(job.id, texts);
   if (errors.length > 0) {
     // Partial success: at least one output came back. Surface the failure
     // for the other one without discarding the text we did get.
     job.error = "Some outputs failed: " + errors.join(" / ");
-    renderQueue();
   }
+  job.texts = texts;
+  finishAudioJob(job);
 }
 
 /** POST one file to the cloud /transcribe endpoint. Returns the transcript text or throws. */
@@ -569,15 +602,16 @@ async function detectLanguage(sample) {
 
 /**
  * Create a translator for one source/target pair via the browser's built-in
- * Translator API. Every failure path pushes a visible per-language note and
- * returns null; nothing here fails silently. Language packs download on
- * first use inside Translator.create().
+ * Translator API. Every failure path pushes a visible per-language note
+ * (ending with `keptNote`, which says what the user still gets) and returns
+ * null; nothing here fails silently. Language packs download on first use
+ * inside Translator.create().
  */
-async function createTranslator(sourceLang, target, notes) {
+async function createTranslator(sourceLang, target, notes, keptNote) {
   const targetName = displayName(target);
-  if (!("Translator" in self)) {
+  if (!translatorAvailable()) {
     notes.push(
-      `${targetName} translation isn't available in this browser. It needs the built-in Translator (Chrome 138+ on desktop). The cleaned track is still saved.`
+      `${targetName} translation isn't available in this browser. It needs the built-in translator (Chrome and Edge on desktop have it). ${keptNote}`
     );
     return null;
   }
@@ -594,7 +628,7 @@ async function createTranslator(sourceLang, target, notes) {
     });
     if (availability === "unavailable") {
       notes.push(
-        `This browser can't translate ${displayName(sourceLang)} to ${targetName}. The cleaned track is still saved.`
+        `This browser can't translate ${displayName(sourceLang)} to ${targetName}. ${keptNote}`
       );
       return null;
     }
@@ -604,15 +638,115 @@ async function createTranslator(sourceLang, target, notes) {
     });
   } catch (err) {
     notes.push(
-      `${targetName} translation couldn't start: ${String(err && err.message ? err.message : err)}. The cleaned track is still saved.`
+      `${targetName} translation couldn't start: ${String(err && err.message ? err.message : err)}. ${keptNote}`
     );
     return null;
   }
 }
 
-/** Which caption translation targets are currently selected. */
-function captionTargets() {
-  return outputEnglish.checked ? ["en"] : [];
+const KEPT_TRANSCRIPT_NOTE = "The original transcript is still included.";
+const KEPT_TRACK_NOTE = "The cleaned track is still saved.";
+
+/**
+ * Translate a long text through one translator in sentence-aligned batches,
+ * so single Translator calls stay a manageable size. Batches are joined
+ * back with single spaces.
+ */
+async function translateLongText(translator, text, sourceLang) {
+  const MAX_BATCH = 2000;
+  let segmenter;
+  try {
+    segmenter = new Intl.Segmenter(sourceLang || undefined, { granularity: "sentence" });
+  } catch (e) {
+    segmenter = new Intl.Segmenter(undefined, { granularity: "sentence" });
+  }
+  const batches = [];
+  let current = "";
+  for (const { segment } of segmenter.segment(text)) {
+    if (current && current.length + segment.length > MAX_BATCH) {
+      batches.push(current);
+      current = "";
+    }
+    current += segment;
+    // Pathological single "sentence" far beyond the cap: hard-split it.
+    while (current.length > MAX_BATCH * 2) {
+      batches.push(current.slice(0, MAX_BATCH * 2));
+      current = current.slice(MAX_BATCH * 2);
+    }
+  }
+  if (current) batches.push(current);
+  const out = [];
+  for (const batch of batches) {
+    out.push(await translator.translate(batch));
+  }
+  return out.join(" ").trim();
+}
+
+/** `name.txt` for the original transcript, `name.<lang>.txt` per target. */
+function audioOutputName(fileName, lang) {
+  return baseName(fileName) + "." + lang + ".txt";
+}
+
+/**
+ * Finish an audio job once Whisper (worker or cloud) has returned: build the
+ * output file list, then translate the original transcript into each
+ * selected target language through the built-in Translator API. "en" uses
+ * the Whisper translate result when that fallback ran. Skipped or failed
+ * languages get a visible note, never a silent omission.
+ */
+async function finishAudioJob(job) {
+  const texts = job.texts || {};
+  const targets = job.targets || [];
+  const notes = job.notes || [];
+  const outputs = [];
+
+  if (typeof texts.original === "string") {
+    outputs.push({ label: "Original", name: txtName(job.file.name), text: texts.original });
+  }
+
+  const original = typeof texts.original === "string" ? texts.original : "";
+  let sourceLang = job.language !== "auto" ? job.language : null;
+  if (!sourceLang && targets.length > 0 && original) {
+    sourceLang = await detectLanguage(original);
+  }
+
+  for (const target of targets) {
+    const targetName = displayName(target);
+    if (target === "en" && typeof texts.english === "string") {
+      // Whisper's own translate task already produced this one.
+      outputs.push({ label: "English", name: audioOutputName(job.file.name, "en"), text: texts.english });
+      continue;
+    }
+    if (!original) {
+      notes.push(`${targetName} skipped, there is no original transcript to translate.`);
+      continue;
+    }
+    if (sourceLang && sameLanguage(sourceLang, target)) {
+      notes.push(`${targetName} skipped, the recording is already ${displayName(sourceLang)}.`);
+      continue;
+    }
+    const translator = await createTranslator(sourceLang, target, notes, KEPT_TRANSCRIPT_NOTE);
+    if (!translator) continue;
+    job.status = "translating";
+    renderQueue();
+    try {
+      const translated = await translateLongText(translator, original, sourceLang);
+      outputs.push({ label: targetName, name: audioOutputName(job.file.name, target), text: translated });
+    } catch (err) {
+      notes.push(
+        `${targetName} translation failed: ${String(err && err.message ? err.message : err)}`
+      );
+    }
+    if (typeof translator.destroy === "function") translator.destroy();
+  }
+
+  job.outputs = outputs;
+  job.notes = notes;
+  job.status = "done";
+  renderQueue();
+  isProcessing = false;
+  pump();
+  maybeShowDownloadAll();
 }
 
 /**
@@ -653,7 +787,7 @@ async function runCaptionJob(job) {
     ];
 
     const chunks = chunkCues(result.cues, result.runBoundaries);
-    for (const target of captionTargets()) {
+    for (const target of job.targets || []) {
       const targetName = displayName(target);
       if (sourceLang && sameLanguage(sourceLang, target)) {
         notes.push(
@@ -661,7 +795,7 @@ async function runCaptionJob(job) {
         );
         continue;
       }
-      const translator = await createTranslator(sourceLang, target, notes);
+      const translator = await createTranslator(sourceLang, target, notes, KEPT_TRACK_NOTE);
       if (!translator) continue;
 
       job.status = "translating";
@@ -708,14 +842,6 @@ async function runCaptionJob(job) {
   isProcessing = false;
   pump();
   maybeShowDownloadAll();
-}
-
-/** Which output variants ("original", "english") are currently checked. */
-function selectedOutputs() {
-  const outputs = [];
-  if (outputOriginal.checked) outputs.push("original");
-  if (outputEnglish.checked) outputs.push("english");
-  return outputs;
 }
 
 /** Decode an audio File via Web Audio API and resample to 16kHz mono Float32. */
@@ -866,31 +992,13 @@ function txtName(fileName) {
 }
 
 /**
- * Build the list of downloadable files for a finished job.
- *
- * When only one output was requested, keep today's naming exactly as-is
- * (`name.txt`) so single-output behavior doesn't change for users who only
- * want one thing. When both were requested, produce two distinct files,
- * e.g. `name.txt` (original) and `name (English).txt` (translation), so
- * neither collides with the single-output convention.
+ * The downloadable files for a finished job. Both job kinds build the same
+ * shape: the original transcript keeps today's `name.txt` naming, every
+ * translated output carries its language code (`name.<lang>.txt`, and
+ * `name.<lang>.srt`/`.vtt` for caption inputs).
  */
 function outputFiles(job) {
-  if (job.kind === "caption") return job.outputs || [];
-  const texts = job.texts || {};
-  const keys = Object.keys(texts);
-  if (keys.length <= 1) {
-    const key = keys[0];
-    return key ? [{ label: "Original", name: txtName(job.file.name), text: texts[key] }] : [];
-  }
-  const base = baseName(job.file.name);
-  const files = [];
-  if ("original" in texts) {
-    files.push({ label: "Original", name: base + ".txt", text: texts.original });
-  }
-  if ("english" in texts) {
-    files.push({ label: "English", name: base + " (English).txt", text: texts.english });
-  }
-  return files;
+  return job.outputs || [];
 }
 
 function downloadFile(name, text) {

@@ -100,8 +100,11 @@ self.onmessage = async (event) => {
   // "original" -> Whisper's plain "transcribe" task (spoken language, untranslated)
   // "english"  -> Whisper's "translate" task (always translates into English)
   // Whisper cannot target any other output language, so these two tasks are
-  // the only ones that ever exist. When both are requested we simply run the
-  // pipeline twice over the same decoded audio, once per task.
+  // the only ones that ever exist here. Translation into other languages
+  // happens on the main thread via the browser's built-in Translator API;
+  // the "english" task remains as the fallback for browsers without it.
+  // When both are requested we simply run the pipeline twice over the same
+  // decoded audio, once per task.
   const { jobId, audio, language, outputs } = msg;
   const wantOriginal = !outputs || outputs.includes("original");
   const wantEnglish = !!(outputs && outputs.includes("english"));
