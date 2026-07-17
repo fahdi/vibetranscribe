@@ -1,13 +1,18 @@
-// swift-tools-version:5.10
+// swift-tools-version:6.0
 import PackageDescription
 
 let package = Package(
     name: "StenoDrop",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v15)],
     targets: [
         .executableTarget(
             name: "StenoDrop",
             path: "Sources/StenoDrop"
-        )
+        ),
+        .testTarget(
+            name: "StenoDropTests",
+            dependencies: ["StenoDrop"],
+            path: "Tests/StenoDropTests"
+        ),
     ]
 )

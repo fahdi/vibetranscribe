@@ -20,6 +20,9 @@ struct RootView: View {
                 )
             }
         }
+        // Kept mounted for the app's whole lifetime: TranslationSession
+        // only exists while a view hosting .translationTask is alive.
+        .background(TranslationBridgeView(bridge: TranslationBridge.shared))
     }
 
     func recheck() {

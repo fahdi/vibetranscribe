@@ -27,17 +27,30 @@ enum EngineError: LocalizedError {
 }
 
 struct WhisperEngine: Sendable {
-    static let modelURL = URL(
-        string: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin")!
-
     static var modelsDirectory: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("StenoDrop/models", isDirectory: true)
     }
 
-    static var modelPath: URL {
-        modelsDirectory.appendingPathComponent("ggml-small.bin")
+    /// The tier used for transcription, persisted across launches. Absent
+    /// on fresh installs and on every pre-tier install (where it resolves
+    /// to `.efficient`, whose filename is the same `ggml-small.bin` those
+    /// installs already have — no forced re-download).
+    static var activeTier: ModelTier {
+        get {
+            guard let raw = UserDefaults.standard.string(forKey: "modelTier"),
+                let tier = ModelTier(rawValue: raw)
+            else { return .default }
+            return tier
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: "modelTier") }
     }
+
+    static func modelPath(for tier: ModelTier) -> URL {
+        modelsDirectory.appendingPathComponent(tier.filename)
+    }
+
+    static var modelPath: URL { modelPath(for: activeTier) }
 
     /// One-time migration from the app's pre-rename identity, so existing
     /// installs don't re-download 466 MB.
@@ -45,18 +58,20 @@ struct WhisperEngine: Sendable {
         let fm = FileManager.default
         let legacy = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("VibeTranscribe/models/ggml-small.bin")
-        guard fm.fileExists(atPath: legacy.path), !fm.fileExists(atPath: modelPath.path)
+        let destination = modelPath(for: .efficient)
+        guard fm.fileExists(atPath: legacy.path), !fm.fileExists(atPath: destination.path)
         else { return }
         try? fm.createDirectory(at: modelsDirectory, withIntermediateDirectories: true)
-        try? fm.moveItem(at: legacy, to: modelPath)
+        try? fm.moveItem(at: legacy, to: destination)
     }
 
-    /// The small model is ~466 MB; anything under 400 MB is a partial download.
-    static var modelIsReady: Bool {
-        let attrs = try? FileManager.default.attributesOfItem(atPath: modelPath.path)
+    static func modelIsReady(for tier: ModelTier) -> Bool {
+        let attrs = try? FileManager.default.attributesOfItem(atPath: modelPath(for: tier).path)
         let size = (attrs?[.size] as? Int64) ?? 0
-        return size > 400_000_000
+        return size > tier.minimumValidSize
     }
+
+    static var modelIsReady: Bool { modelIsReady(for: activeTier) }
 
     private static let cacheLock = NSLock()
     nonisolated(unsafe) private static var binaryCache: [String: String] = [:]

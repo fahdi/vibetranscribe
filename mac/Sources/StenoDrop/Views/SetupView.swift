@@ -52,17 +52,21 @@ struct SetupView: View {
         HStack(alignment: .top, spacing: 10) {
             statusIcon(ok: modelReady)
             VStack(alignment: .leading, spacing: 6) {
-                Text("Whisper model (small, ~466 MB)")
+                Text("Whisper model — \(ModelTier.default.title) (\(ModelTier.default.approximateSizeLabel))")
                     .fontWeight(.medium)
+                Text(ModelTier.default.summary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 if modelReady {
-                    Text("Downloaded").font(.caption).foregroundStyle(.secondary)
+                    Text("Downloaded — more capable models are available in Settings.")
+                        .font(.caption).foregroundStyle(.secondary)
                 } else if downloader.isDownloading {
                     ProgressView(value: downloader.progress)
                         .frame(maxWidth: 220)
                     Text("\(Int(downloader.progress * 100))%")
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
-                    Button("Download Model") { downloader.start() }
+                    Button("Download Model") { downloader.start(tier: .default) }
                     if let error = downloader.error {
                         Text(error).font(.caption).foregroundStyle(.red)
                     }

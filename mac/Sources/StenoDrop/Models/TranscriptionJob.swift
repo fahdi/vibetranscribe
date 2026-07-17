@@ -41,4 +41,16 @@ struct TranscriptionJob: Identifiable {
     var transcript: String = ""
 
     var filename: String { sourceURL.lastPathComponent }
+
+    /// `nil` returns the original-language output path unchanged
+    /// (`song.txt`, back-compat with every existing job). A language code
+    /// inserts it before the extension (`song.en.txt`), even when
+    /// `outputURL` was already disambiguated for a source-basename
+    /// collision (`song.mp3.txt` -> `song.mp3.en.txt`).
+    func outputURL(forLanguage language: String?) -> URL {
+        guard let language else { return outputURL }
+        return outputURL.deletingPathExtension()
+            .appendingPathExtension(language)
+            .appendingPathExtension(outputURL.pathExtension)
+    }
 }

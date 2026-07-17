@@ -26,7 +26,7 @@ struct RecordingView: View {
             Label("Record", systemImage: "record.circle")
                 .font(.headline)
             Spacer()
-            Text("\(languageName)\(queue.translateToEnglish ? " → English" : "")")
+            Text("\(languageName)\(queue.translatesToEnglish ? " → English" : "")")
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .help("Language and translate settings from the main window, applied per chunk.")

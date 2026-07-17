@@ -196,7 +196,7 @@ final class RecordingController: ObservableObject {
         guard !samples.isEmpty else { return }
         // Settings are read at chunk time, so mid-recording toggle changes
         // apply from the next chunk onward.
-        let translate = JobQueue.shared.translateToEnglish
+        let translate = JobQueue.shared.translatesToEnglish
         let language = JobQueue.shared.languageCode
         pendingChunkCount += 1
         updateTranscriptionStatus()

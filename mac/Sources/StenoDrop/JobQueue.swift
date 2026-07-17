@@ -31,8 +31,14 @@ final class JobQueue: ObservableObject {
     ]
 
     @Published var jobs: [TranscriptionJob] = []
-    @Published var translateToEnglish: Bool {
-        didSet { UserDefaults.standard.set(translateToEnglish, forKey: "translateToEnglish") }
+    /// Languages the transcript is additionally translated into, beyond the
+    /// original spoken language (which is always produced). "en" uses
+    /// whisper's own native translate task; any other code routes through
+    /// `TranslationBridge`. See `TranslationPipeline`.
+    @Published var targetLanguages: Set<String> {
+        didSet {
+            UserDefaults.standard.set(Array(targetLanguages), forKey: "targetLanguages")
+        }
     }
     @Published var languageCode: String {
         didSet { UserDefaults.standard.set(languageCode, forKey: "languageCode") }
@@ -41,12 +47,24 @@ final class JobQueue: ObservableObject {
 
     init() {
         let defaults = UserDefaults.standard
-        translateToEnglish =
-            defaults.object(forKey: "translateToEnglish") as? Bool ?? true
+        if let saved = defaults.stringArray(forKey: "targetLanguages") {
+            targetLanguages = Set(saved)
+        } else {
+            // Pre-multi-language installs only had a translateToEnglish
+            // bool (default true) — carry that choice forward once.
+            let legacyTranslate = defaults.object(forKey: "translateToEnglish") as? Bool ?? true
+            targetLanguages = legacyTranslate ? ["en"] : []
+        }
         let saved = defaults.string(forKey: "languageCode") ?? "auto"
         languageCode =
             Self.languages.contains { $0.code == saved } ? saved : "auto"
     }
+
+    /// Live-recording chunks (see `RecordingController`) only support the
+    /// existing English-only translate path — multi-language translation
+    /// per ~15 s chunk would be too heavy for real-time use. Scoped to the
+    /// batch file pipeline only for now.
+    var translatesToEnglish: Bool { targetLanguages.contains("en") }
 
     private var isProcessing = false
     private var noticeClearTask: Task<Void, Never>?
@@ -143,38 +161,79 @@ final class JobQueue: ObservableObject {
         isProcessing = true
 
         let job = jobs[index]
-        let translate = translateToEnglish
+        let languages = targetLanguages
         let language = languageCode
         // Conversion is sub-second; whisper dominates, so show one active state.
         jobs[index].status = .transcribing
 
         Task {
-            let result = await Task.detached(priority: .userInitiated) {
+            // The original-language transcript is always produced first —
+            // every additional target language translates from this, either
+            // via whisper re-run (English) or TranslationBridge (others).
+            let originalResult = await Task.detached(priority: .userInitiated) {
                 () -> Result<String, Error> in
                 do {
                     return .success(
                         try WhisperEngine.transcribe(
-                            job.sourceURL, translateToEnglish: translate, language: language))
+                            job.sourceURL, translateToEnglish: false, language: language))
                 } catch {
                     return .failure(error)
                 }
             }.value
 
-            if let idx = self.jobs.firstIndex(where: { $0.id == job.id }) {
-                switch result {
-                case .success(let text):
-                    self.jobs[idx].transcript = text
-                    do {
-                        try text.write(to: job.outputURL, atomically: true, encoding: .utf8)
-                        self.jobs[idx].status = .done
-                    } catch {
-                        self.jobs[idx].status = .doneWithWarning(
-                            "Couldn't save \(job.outputURL.lastPathComponent): \(error.localizedDescription)")
-                    }
-                case .failure(let error):
-                    self.jobs[idx].status = .failed(error.localizedDescription)
-                }
+            guard let idx = self.jobs.firstIndex(where: { $0.id == job.id }) else {
+                self.isProcessing = false
+                self.pump()
+                return
             }
+
+            switch originalResult {
+            case .failure(let error):
+                self.jobs[idx].status = .failed(error.localizedDescription)
+            case .success(let originalText):
+                self.jobs[idx].transcript = originalText
+                var warnings: [String] = []
+
+                do {
+                    try originalText.write(
+                        to: job.outputURL(forLanguage: nil), atomically: true, encoding: .utf8)
+                } catch {
+                    warnings.append(
+                        "Couldn't save \(job.outputURL.lastPathComponent): \(error.localizedDescription)")
+                }
+
+                let outcomes = await TranslationPipeline.run(
+                    originalText: originalText,
+                    targetLanguages: languages,
+                    whisperTranslate: {
+                        try await Task.detached(priority: .userInitiated) {
+                            try WhisperEngine.transcribe(
+                                job.sourceURL, translateToEnglish: true, language: language)
+                        }.value
+                    },
+                    engine: TranslationBridge.shared
+                )
+
+                for outcome in outcomes {
+                    let dest = job.outputURL(forLanguage: outcome.language)
+                    switch outcome.result {
+                    case .success(let text):
+                        do {
+                            try text.write(to: dest, atomically: true, encoding: .utf8)
+                        } catch {
+                            warnings.append(
+                                "Couldn't save \(dest.lastPathComponent): \(error.localizedDescription)")
+                        }
+                    case .failure(let error):
+                        warnings.append(
+                            "\(outcome.language.uppercased()) translation failed: \(error.localizedDescription)")
+                    }
+                }
+
+                self.jobs[idx].status =
+                    warnings.isEmpty ? .done : .doneWithWarning(warnings.joined(separator: "; "))
+            }
+
             self.isProcessing = false
             self.pump()
         }

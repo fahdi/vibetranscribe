@@ -49,5 +49,9 @@ struct StenoDropApp: App {
                 .environmentObject(queue)
                 .frame(minWidth: 560, minHeight: 480)
         }
+        Settings {
+            SettingsView()
+                .environmentObject(queue)
+        }
     }
 }

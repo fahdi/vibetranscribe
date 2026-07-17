@@ -5,25 +5,45 @@ final class ModelDownloader: NSObject, ObservableObject {
     @Published var progress: Double = 0
     @Published var isDownloading = false
     @Published var error: String?
-
-    /// ggml-small.bin is ~466 MB; anything smaller is an error page or a
-    /// truncated body, even if the HTTP layer called it a success.
-    nonisolated static let minimumValidSize: Int64 = 400_000_000
+    /// The tier currently downloading, if any — nil when idle.
+    @Published private(set) var downloadingTier: ModelTier?
 
     private var session: URLSession?
     private var task: URLSessionDownloadTask?
 
-    func start() {
+    /// Pure validation shared by the download delegate and tests: a
+    /// non-200 status or an undersized body (error page, truncated
+    /// transfer) both need to fail before the file is trusted.
+    nonisolated static func validate(status: Int, size: Int64, tier: ModelTier) -> String? {
+        if status != 200 {
+            return "Download failed (HTTP \(status)). Try again."
+        }
+        if size < tier.minimumValidSize {
+            let mb = tier.minimumValidSize / 1_000_000
+            return "Download incomplete (\(size / 1_000_000) MB of ~\(mb) MB). "
+                + "Check your connection and try again."
+        }
+        return nil
+    }
+
+    func start(tier: ModelTier = .default) {
         guard !isDownloading else { return }
         error = nil
         progress = 0
         isDownloading = true
+        downloadingTier = tier
         try? FileManager.default.createDirectory(
             at: WhisperEngine.modelsDirectory, withIntermediateDirectories: true)
         let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         self.session = session
-        task = session.downloadTask(with: WhisperEngine.modelURL)
-        task?.resume()
+        let task = session.downloadTask(with: tier.downloadURL)
+        // Stashed on the task (thread-safe, no MainActor hop needed) so the
+        // nonisolated delegate callback can recover which tier this is
+        // without touching MainActor-isolated state before the temp file at
+        // `location` is deleted.
+        task.taskDescription = tier.rawValue
+        self.task = task
+        task.resume()
     }
 
     func cancel() {
@@ -42,6 +62,7 @@ final class ModelDownloader: NSObject, ObservableObject {
 
     private func finish(errorMessage: String?) {
         isDownloading = false
+        downloadingTier = nil
         progress = errorMessage == nil ? 1 : 0
         error = errorMessage
         task = nil
@@ -67,19 +88,17 @@ extension ModelDownloader: URLSessionDownloadDelegate {
         // Validate before moving: a 404/500 body or captive-portal page also
         // lands here "successfully". Work synchronously — `location` is
         // deleted when this method returns.
+        let tier = ModelTier(rawValue: downloadTask.taskDescription ?? "") ?? .default
         var failure: String?
         let status = (downloadTask.response as? HTTPURLResponse)?.statusCode ?? 0
         let attrs = try? FileManager.default.attributesOfItem(atPath: location.path)
         let size = (attrs?[.size] as? Int64) ?? 0
 
-        if status != 200 {
-            failure = "Download failed (HTTP \(status)). Try again."
-        } else if size < Self.minimumValidSize {
-            failure = "Download incomplete (\(size / 1_000_000) MB of ~466 MB). "
-                + "Check your connection and try again."
+        if let message = Self.validate(status: status, size: size, tier: tier) {
+            failure = message
         } else {
             do {
-                let dest = WhisperEngine.modelPath
+                let dest = WhisperEngine.modelPath(for: tier)
                 try? FileManager.default.removeItem(at: dest)
                 try FileManager.default.moveItem(at: location, to: dest)
             } catch {
